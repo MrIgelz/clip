@@ -1,0 +1,22 @@
+<div class="grid">
+<div class="col-4">
+    <div class="sidebar">
+  <div class="grid-stack-item sidebar-item" data-gs-w="2" data-gs-h="2">
+    <div class="grid-stack-item-content">
+      <div class="my-preview-box">Neues Widget (2x2)</div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="col-8">
+<gridstack [class.grid-loading]="widgetService.isLoading$ | async" [options]="gridOptions" (changeCB)="onChange($event)">
+  <div empty-content>message when grid is empty</div>
+</gridstack>
+</div>
+</div>
+
+<button 
+  
+  [disabled]="widgetService.isLoading$ | async">
+  Widget hinzufügen
+</button>
