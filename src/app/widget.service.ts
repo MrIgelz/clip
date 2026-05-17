@@ -1,48 +1,66 @@
-import { Injectable } from '@angular/core';
-import { NgGridStackWidget } from 'gridstack/dist/angular';
+import { Injectable, TemplateRef } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { Widget } from './dashboard/dashboard.component';
 
-@Injectable({ providedIn: 'root' })
+export type GridAction = 
+  { type: 'load'; widgets: Widget[]; } | 
+  { type: 'add'; widget: Widget; } | 
+  { type: 'remove'; widgetId: string; } | 
+  null;
+
+@Injectable()
 export class WidgetService {
-  
-  private widgets = new BehaviorSubject<NgGridStackWidget[]>([]);
-  private isLoading = new BehaviorSubject<boolean>(false);
 
-  widgets$ = this.widgets.asObservable();
-  isLoading$ = this.isLoading.asObservable();
+  private templates = new Map<string, TemplateRef<any>>();
 
-  setLoading(state: boolean) {
-    this.isLoading.next(state);
+  private templateRegistry = new BehaviorSubject<Map<string, TemplateRef<any>>>(new Map());
+
+  private widgets: Widget[] = [];
+
+  private gridAction = new BehaviorSubject<GridAction>(null);
+
+  templateRegistry$ = this.templateRegistry.asObservable();
+
+  gridAction$ = this.gridAction.asObservable();
+
+  registerTemplate(name: string, template: TemplateRef<any>) {
+    console.log("Registered", name)
+    this.templates.set(name, template);
+    this.templateRegistry.next(new Map(this.templates));
   }
 
-  async loadLayout(config: NgGridStackWidget[]) {
-    if (this.isLoading.value) return;
-    
-    this.isLoading.next(true);
-    this.widgets.next(config);
-    this.isLoading.next(false);
+  unregisterTemplate(name: string) {
+    this.templates.delete(name);
+    this.templateRegistry.next(new Map(this.templates));
   }
 
-  addWidget(widget: NgGridStackWidget) {
-    if (this.isLoading.value) return;
-
-    const current = this.widgets.value;
-    this.widgets.next([...current, widget]);
+  loadLayout(widgets: Widget[]) {
+    this.widgets = widgets;
+    this.gridAction.next({
+      type: 'load',
+      widgets: widgets
+    });
   }
 
-  removeWidget(id: string) {
-    if (this.isLoading.value) return;
-
-    const current = this.widgets.value;
-    const updated = current.filter(w => w.id !== id);
-    if (current.length !== updated.length) {
-      this.widgets.next(updated);
+  addWidget(widget: Widget): void {
+    if (!this.widgets.find((w: Widget) => w.id === widget.id)) {
+      this.widgets.push(widget);
+      this.gridAction.next({
+        type: 'add',
+        widget
+      });
     }
   }
 
-  clearAll() {
-    if (this.isLoading.value) return;
-
-    this.widgets.next([]);
+  removeWidget(widgetId: string): void {
+    const length: number = this.widgets.length;
+    const updated = this.widgets.filter((w: Widget) => w.id !== widgetId);
+    if (length !== updated.length) {
+      this.widgets = updated;
+      this.gridAction.next({
+        type: 'remove',
+        widgetId
+      });
+    }
   }
 }
