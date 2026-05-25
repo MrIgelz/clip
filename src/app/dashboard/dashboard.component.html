@@ -2,13 +2,31 @@
 
 <div class="grid">
 <div class="col-4">
-    <div class="sidebar">
-  <div class="grid-stack-item sidebar-item" data-gs-w="2" data-gs-h="2">
-    <div class="grid-stack-item-content">
-      <div class="my-preview-box">Neues Widget (2x2)</div>
-    </div>
+  <div class="sidebar">
+    @for (card of editableCards; track card.cardType) {
+        <div class="grid-stack-item sidebar-item"
+          [hidden]="card.enabled"
+          [attr.data-gs-widget]="{ 
+            id: card.cardType, 
+            w: card.width, 
+            h: 10, 
+            noResize: !card.resizeable,
+            selector:'widget-card',
+            input: {
+              templateType: card.hideOnEmpty ? 'placeholder' : card.cardType
+            },
+            isEditable: true,
+            card
+          } | json">
+          <div class="grid-stack-item-content">
+            <div class="my-preview-box">Neues Widget (2x2)</div>
+          </div>    
+        </div>
+      
+    }
+    <button (click)="toggleEdit()">Toggle Edit {{ isEditable }}</button>
+    <p-checkbox [(ngModel)]="isUsingDefault" (onChange)="widgetService.useDefault($event.checked)"  [binary]="true" [disabled]="editableCards === null" />
   </div>
-</div>
 </div>
 <div class="col-8">
 <gridstack [options]="gridOptions">

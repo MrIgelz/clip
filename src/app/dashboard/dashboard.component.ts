@@ -1,23 +1,14 @@
-import { AfterViewInit, Component, DestroyRef, Directive, ElementRef, EventEmitter, inject, Input, OnDestroy, OnInit, Output, TemplateRef, ViewChild, ViewEncapsulation } from '@angular/core';
-import { AsyncPipe, CommonModule } from '@angular/common';
-import { GridItemHTMLElement, GridStack, GridStackOptions } from 'gridstack';
-import { GridstackComponent, gsCreateNgComponents, NgGridStackOptions, NgGridStackWidget, nodesCB, BaseWidget, NgCompInputs } from 'gridstack/dist/angular';
+import { AfterViewInit, Component, DestroyRef, Directive, ElementRef, inject, Input, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { CommonModule, JsonPipe } from '@angular/common';
+import { GridItemHTMLElement, GridStack, GridStackNode } from 'gridstack';
+import { GridstackComponent, NgGridStackOptions, BaseWidget } from 'gridstack/dist/angular';
 import { CardModule } from 'primeng/card';
-import { GridAction, WidgetService } from '../widget.service';
+import { DashboardWidget,  DashboardAction, WidgetService, DashboardCard } from '../widget.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import { map, Observable, pairwise, startWith } from 'rxjs';
-
-export interface CardData {
-  positionX: number;
-  positionY: number;
-  width: number;
-  name: string
-}
-
-export interface Widget extends NgGridStackWidget {
-  el?: GridItemHTMLElement;
-  cardData: CardData;  
-}
+import { map, Observable } from 'rxjs';
+import { PanelModule } from 'primeng/panel';
+import { CheckboxModule } from 'primeng/checkbox';
+import { FormsModule } from '@angular/forms';
 
 @Directive({
   selector: '[namedCardTemplate]',
@@ -62,7 +53,7 @@ export class CardTemplateComponent {}
 
 @Component({
   selector: 'widget-card',
-  imports: [CardModule, CommonModule],
+  imports: [CardModule, CommonModule, PanelModule],
   template: `
   <div #container>
     <div class="widget-header">
@@ -74,10 +65,27 @@ export class CardTemplateComponent {}
         <i class="fa-solid fa-xmark fa-xs"></i>
       </div>
     </div>
+    @if (templateType !== 'placeholder') {
       <ng-container *ngTemplateOutlet="template$ | async"></ng-container>
+    } @else { 
+      <p-panel [header]="cardType">
+      <div class="placeholder-card">
+        <h3></h3>
+        <p>Diese Karte dient als Platzhalter. Sie wird nur eingeblendet, falls valide Daten vorhanden sind.</p>
+      </div>
+      </p-panel>
+    }
   </div>
   `,
   styles: [`
+    .placeholder-card {
+      padding: 5px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      font-family: Arial, sans-serif;
+      background-color: #ffffff;
+    }
     ::ng-deep .grid-stack-placeholder > .placeholder-content {
       border-radius: var(--p-card-border-radius);
     }
@@ -122,29 +130,42 @@ export class CardTemplateComponent {}
 export class WidgetCardComponent extends BaseWidget implements OnInit, AfterViewInit, OnDestroy {
 
   private resizeObserver!: ResizeObserver;
-
   private prevHeight: number | undefined;
-
   private widgetService: WidgetService = inject(WidgetService);
-
+  private destroyRef: DestroyRef = inject(DestroyRef);
+  
+  private isEditable: boolean = false;
   template$!: Observable<TemplateRef<any> | null>;
+
+  @Input({required: true})
+  templateType!: string;
 
   @ViewChild('container') 
   container!: ElementRef<HTMLDivElement>;
+
+  cardType: string = "";
 
   constructor() {
     super(); 
   }
 
   ngOnInit() {
+    const widget = this.widgetItem as DashboardWidget | undefined;
+    if (widget) this.cardType = widget.card.cardType;
+
+    this.widgetService.isEditable$.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(isEditable => this.isEditable = isEditable);
+
     this.template$ = this.widgetService.templateRegistry$.pipe(
-      map((templateMap: Map<string, TemplateRef<any>>) => templateMap.get("timeLeave") || null)
+      takeUntilDestroyed(this.destroyRef),
+      map((templateMap: Map<string, TemplateRef<any>>) => templateMap.get(this.templateType) || null)
     );
   }
 
   ngAfterViewInit(): void {
     this.resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
-      const widget: Widget | undefined = this.widgetItem as Widget | undefined;
+      const widget = this.widgetItem as DashboardWidget | undefined;
       const el: GridItemHTMLElement | undefined = widget?.el
       const grid: GridStack | undefined = el?.gridstackNode?.grid;
       if (el && grid && entries.length) {
@@ -163,21 +184,25 @@ export class WidgetCardComponent extends BaseWidget implements OnInit, AfterView
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }
-    console.log("Template Destroyed", this.widgetItem);
   }
 
   removeWidget(): void {
-    if (this.widgetItem && this.widgetItem.id) {
-      this.widgetService.removeWidget(this.widgetItem.id);
+    const widget = this.widgetItem as DashboardWidget | undefined;
+    if (widget && this.isEditable) {
+      this.widgetService.removeWidget(widget);
     }
   }
 }
 
 @Component({
   selector: 'dashboard',
+  styleUrl: 'dashboard.component.scss',
   templateUrl: 'dashboard.component.html',
   providers: [WidgetService],
   imports: [
+    FormsModule,
+    JsonPipe,
+    CheckboxModule,
     GridstackComponent,
     CardTemplateComponent,
     CardTemplateComponent
@@ -185,11 +210,15 @@ export class WidgetCardComponent extends BaseWidget implements OnInit, AfterView
 })
 export class DashboardComponent implements AfterViewInit {
   
-  private id: number = 0;
-
   private destroyRef = inject(DestroyRef); 
 
-  private widgetService: WidgetService = inject(WidgetService);
+  widgetService: WidgetService = inject(WidgetService);
+
+  isUsingDefault: boolean = true;
+
+  isEditable: boolean = false;
+
+  editableCards: DashboardCard[] | null = null;
 
   @ViewChild(GridstackComponent) 
   dashboard!: GridstackComponent;
@@ -199,7 +228,7 @@ export class DashboardComponent implements AfterViewInit {
     resizable: {
       handles: 'w, e'
     },
-    acceptWidgets: (el: Element) => true,
+    acceptWidgets: (el: Element) => this.isEditable,
     sizeToContent: false,
     margin: 5,
     minRow: 6,
@@ -207,89 +236,103 @@ export class DashboardComponent implements AfterViewInit {
   }
 
   constructor() {
-    GridstackComponent.addComponentToSelectorType([WidgetCardComponent]) ;
+    GridstackComponent.addComponentToSelectorType([WidgetCardComponent]);
+  }
+
+  toggleEdit(): void {
+    this.widgetService.setEditableStatus(!this.isEditable);
   }
 
   ngAfterViewInit() {
     const grid: GridStack | undefined = this.dashboard.grid;
     if(grid) {
-      GridStack.setupDragIn('.sidebar-item', { 
-        helper: 'clone',
-        appendTo: 'body'
-      }); 
-      grid.updateOptions({sizeToContent: false});
+      grid.on('change', (event: Event, changedNodes: GridStackNode[]) => {
+        if (!this.editableCards) return;
+        for (const widget of changedNodes as DashboardWidget[]) {
+          const card: DashboardCard | undefined = this.editableCards.find(card => card.cardType === widget.id);
+          if (card && widget.isEditable) {
+            card.positionX = widget.x!;
+            card.positionY = widget.y!;  
+            card.width = widget.w!;
+          }
+        }    
+      });
 
-      grid.on('resizestop', (event: Event, el: HTMLElement) => {
+      grid.on('dropped', (event: Event, _: GridStackNode, node: GridStackNode) => {
+        const dropped = node as DashboardWidget;
+        const { id, x, y, w, noResize, selector, input, card } = dropped;
+        if(dropped.el) {
+          const widget: DashboardWidget = { id, x, y, w, noResize, selector, input, card, isEditable: true, h: 1 };
+          grid.removeWidget(dropped.el);
+          this.widgetService.addWidget(widget);
+        }
+      });
+
+      grid.on('resizestop', (event: Event, el: GridItemHTMLElement) => {
         if (el) grid.resizeToContent(el);
       });
 
-      this.widgetService.gridAction$
-        .pipe(
-          takeUntilDestroyed(this.destroyRef)
-        )
-        .subscribe((action: GridAction) => {
-          if (!action) return;
+      this.widgetService.isUsingDefault$.pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe(isUsingDefault => this.isUsingDefault = isUsingDefault);
 
-          let allItems: GridItemHTMLElement[] | undefined;
-          let el: GridItemHTMLElement | undefined;
+      this.widgetService.isEditable$.pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe(isEditable => {
+        this.isEditable = isEditable;
+        isEditable ? grid.enable() : grid.disable();
+      });
+
+      this.widgetService.editableCards$.pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe((editableCards: DashboardCard[] | null) => {
+        this.editableCards = editableCards;
+
+          setTimeout(() => {
+            GridStack.setupDragIn(
+              '.sidebar-item', 
+              { helper: 'clone', appendTo: 'body' }
+          )}, 100);
+      });
+
+      this.widgetService.dashboardAction$.pipe(
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe((action: DashboardAction) => {
+        if (!action) return;
+
+        if(action.type === 'load') {
+            grid.load(action.widgets);
+            grid.getGridItems().forEach(item => grid.resizeToContent(item));
+        } else {
+          if (!this.editableCards) return;
+
+          const allItems: GridItemHTMLElement[] = grid.getGridItems();
+          const item: GridItemHTMLElement | undefined = allItems.find((item: GridItemHTMLElement) =>
+            item.gridstackNode?.id === action.widget.id);
+          const editableCard: DashboardCard | undefined = this.editableCards.find(
+            card => card.cardType === action.widget.id);
+
           switch (action.type) {
-            case 'load':
-              grid.load(action.widgets);
-              break;
             case 'add':
-              allItems = grid.getGridItems();
-              el = allItems.find((item: GridItemHTMLElement) => item.gridstackNode?.id === action.widget.id);
-              if (!el) {
-                grid.addWidget(action.widget);
+              if (!item && editableCard) {
+                editableCard.positionX = action.widget.x!;
+                editableCard.positionY = action.widget.y!;
+                editableCard.width = action.widget.w!;
+                editableCard.height = 1;
+                editableCard.enabled = true;
+                const addedItem: GridItemHTMLElement = grid.addWidget(action.widget);
+                grid.resizeToContent(addedItem)
               }
               break;
             case 'remove':
-              allItems = grid.getGridItems();
-              el = allItems.find((item: GridItemHTMLElement) => item.gridstackNode?.id === action.widgetId);
-              if (el) {
-                grid.removeWidget(el);
+              if (item && editableCard) {
+                editableCard.height = 1;
+                editableCard.enabled = false;
+                grid.removeWidget(item);
               }
           }
-        });
-    }
-
-    const widgets: any[]= [];
-    for(let i: number = 0; i < 4; i++) {
-      const widget: Widget = {
-        id: String(++this.id),
-        x: 0, y: 4-i, w: 4-i, h: 1,
-        selector:'widget-card',
-        input: {
-          grid: this.dashboard
-        },
-        cardData: {
-          positionX: 1,
-          positionY: 2,
-          width: 3,
-          name: "asd"
         }
-      };
-      widgets.push(widget);
+      });
     }
-
-    this.widgetService.loadLayout(widgets);
-  
-    /* Copy Widget
-    const wCopy: Widget[] = widgets.map(w => ({
-      id: w.id,
-      x: w.x,
-      y: w.y,
-      w: w.w,
-      h: 1,
-      selector: w.selector,
-      input: { grid: this.dashboard }, 
-      cardData: JSON.parse(JSON.stringify(w.cardData))
-    }));
-
-    this.widgetService.loadLayout(wCopy);*/
   }
-
-    addWidget(widget: Widget) {
-      this.widgetService.addWidget(widget)
-    }
 }
