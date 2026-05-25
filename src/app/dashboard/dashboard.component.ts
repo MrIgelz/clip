@@ -243,6 +243,14 @@ export class DashboardComponent implements AfterViewInit {
     this.widgetService.setEditableStatus(!this.isEditable);
   }
 
+  private updateSidebar(): void {
+    setTimeout(() => {
+      GridStack.setupDragIn(
+        '.sidebar-item', 
+        { helper: 'clone', appendTo: 'body' }
+    )}, 200);
+  }
+
   ngAfterViewInit() {
     const grid: GridStack | undefined = this.dashboard.grid;
     if(grid) {
@@ -280,19 +288,15 @@ export class DashboardComponent implements AfterViewInit {
         takeUntilDestroyed(this.destroyRef)
       ).subscribe(isEditable => {
         this.isEditable = isEditable;
+        this.updateSidebar();
         isEditable ? grid.enable() : grid.disable();
       });
 
       this.widgetService.editableCards$.pipe(
         takeUntilDestroyed(this.destroyRef)
       ).subscribe((editableCards: DashboardCard[] | null) => {
-        this.editableCards = editableCards;
-
-          setTimeout(() => {
-            GridStack.setupDragIn(
-              '.sidebar-item', 
-              { helper: 'clone', appendTo: 'body' }
-          )}, 100);
+        this.editableCards = editableCards; 
+        this.updateSidebar();
       });
 
       this.widgetService.dashboardAction$.pipe(

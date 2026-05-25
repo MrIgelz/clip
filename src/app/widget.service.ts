@@ -105,8 +105,6 @@ export class WidgetService {
     const cards: DashboardCard[] = this.getAllCards();
     const editCards: DashboardCard[] = [];
 
-    
-    
     for (const card of cards) {
       if (card.isSystemCard || !this.hasRights(card)) continue;
 
@@ -188,6 +186,27 @@ export class WidgetService {
         return true;
       default:
         return true;
+    }
+  }
+
+  save(): void {
+    if (this.response && this.response.dashboard && this.editableCards) {
+      const dashboardRequest = this.response.dashboard;
+      const cardRequests: DashboardCardRequest[] = [];
+      for (const card of this.editableCards) {
+        if (card.enabled) {
+          const cardRequest: DashboardCardRequest = {
+            uuid: "",
+            parentUuid: dashboardRequest.uuid,
+            cardType: card.cardType,
+            positionX: card.positionX,
+            positionY: card.positionY,
+            width: card.width
+          };
+          cardRequests.push(cardRequest);
+        }
+      }
+      console.log("Saving Dashboard", { dashboardRequest, cardRequests });
     }
   }
 

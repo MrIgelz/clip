@@ -3,7 +3,8 @@
 <div class="grid">
 <div class="col-4">
   <div class="sidebar">
-    @for (card of editableCards; track card.cardType) {
+    @if (isEditable) {
+      @for (card of editableCards; track card.cardType) {
         <div class="grid-stack-item sidebar-item"
           [hidden]="card.enabled"
           [attr.data-gs-widget]="{ 
@@ -21,10 +22,11 @@
           <div class="grid-stack-item-content">
             <div class="my-preview-box">Neues Widget (2x2)</div>
           </div>    
-        </div>
-      
+        </div>        
+      }
     }
     <button (click)="toggleEdit()">Toggle Edit {{ isEditable }}</button>
+    <button (click)="widgetService.save()">Save</button>
     <p-checkbox [(ngModel)]="isUsingDefault" (onChange)="widgetService.useDefault($event.checked)"  [binary]="true" [disabled]="editableCards === null" />
   </div>
 </div>
