@@ -62,7 +62,7 @@ export class WidgetService {
   private dashboardAction = new BehaviorSubject<DashboardAction>(null);
   dashboardAction$ = this.dashboardAction.asObservable();
 
-  private loadModul$ = new BehaviorSubject<string>("desktop");
+  private loadModul$ = new BehaviorSubject<string | DashboardResponse>("");
 
   private response: DashboardResponse | null = null;
   private editableCards: DashboardCard[] | null = null;
@@ -189,6 +189,16 @@ export class WidgetService {
     }
   }
 
+  loadModule(module: string): void {
+    this.loadModul$.next(module);
+  }
+
+  restore(): void {
+    if (this.response) {
+      this.loadModul$.next(this.response);
+    }
+  }
+
   save(): void {
     if (this.response && this.response.dashboard && this.editableCards) {
       const dashboardRequest = this.response.dashboard;
@@ -251,7 +261,7 @@ export class WidgetService {
   }
   
   editableCards$: Observable<DashboardCard[] | null> = this.loadModul$.pipe(
-    switchMap((module: string): Observable<{ module: string, response: DashboardResponse | 'error' }> => {
+    switchMap((module: string | DashboardResponse): Observable<{ module: string, response: DashboardResponse | 'error' }> => {
 
       const dashboardResponse: DashboardResponse = {
         dashboard: {
@@ -275,19 +285,26 @@ export class WidgetService {
         catchError(() => of<'error'>('error'))
       );
 
-      switch (module) {
-        case 'desktop':
-          return combineLatest([this.testObs, fetchDashboard()]).pipe(
-            switchMap(([test, dashboardResponse]) => {
-              if (test === null) return EMPTY;
+      if (typeof module === 'string') {
+        switch (module) {
+          case 'desktop':
+            return combineLatest([this.testObs, fetchDashboard()]).pipe(
+              switchMap(([test, dashboardResponse]) => {
+                if (test === null) return EMPTY;
 
-              return of({ module, response: dashboardResponse });
-            })
-          );
-        case 'booking':
-          return of({ module, response: 'error' });
-        default:
-          return EMPTY;
+                return of({ module, response: dashboardResponse });
+              })
+            );
+          case 'booking':
+            return of({ module, response: 'error' });
+          default:
+            return EMPTY;
+        }
+      } else {
+        return of({ 
+          module: module.dashboard!.module, 
+          response: module
+        });
       }
     }),
     map(({ module, response }: { module: string; response: DashboardResponse | 'error' }) => {

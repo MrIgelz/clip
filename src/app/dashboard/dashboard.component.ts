@@ -68,24 +68,13 @@ export class CardTemplateComponent {}
     @if (templateType !== 'placeholder') {
       <ng-container *ngTemplateOutlet="template$ | async"></ng-container>
     } @else { 
-      <p-panel [header]="cardType">
-      <div class="placeholder-card">
-        <h3></h3>
+      <p-panel [header]="cardType" [style]="{'margin': '5px'}">
         <p>Diese Karte dient als Platzhalter. Sie wird nur eingeblendet, falls valide Daten vorhanden sind.</p>
-      </div>
       </p-panel>
     }
   </div>
   `,
   styles: [`
-    .placeholder-card {
-      padding: 5px;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      font-family: Arial, sans-serif;
-      background-color: #ffffff;
-    }
     ::ng-deep .grid-stack-placeholder > .placeholder-content {
       border-radius: var(--p-card-border-radius);
     }
@@ -254,6 +243,8 @@ export class DashboardComponent implements AfterViewInit {
   ngAfterViewInit() {
     const grid: GridStack | undefined = this.dashboard.grid;
     if(grid) {
+      this.widgetService.loadModule("desktop");
+
       grid.on('change', (event: Event, changedNodes: GridStackNode[]) => {
         if (!this.editableCards) return;
         for (const widget of changedNodes as DashboardWidget[]) {

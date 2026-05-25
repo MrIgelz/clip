@@ -27,6 +27,7 @@
     }
     <button (click)="toggleEdit()">Toggle Edit {{ isEditable }}</button>
     <button (click)="widgetService.save()">Save</button>
+    <button (click)="widgetService.restore()">Restore</button>
     <p-checkbox [(ngModel)]="isUsingDefault" (onChange)="widgetService.useDefault($event.checked)"  [binary]="true" [disabled]="editableCards === null" />
   </div>
 </div>
