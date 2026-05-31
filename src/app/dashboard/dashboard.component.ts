@@ -12,6 +12,8 @@ import { FormsModule } from '@angular/forms';
 import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { CalendarOptions } from '@fullcalendar/core/index.js';
+import { Timeline, TimelineOptions } from 'vis-timeline/standalone';
+import { DataSet } from 'vis-data';  
 
 // NEW
 @Directive({
@@ -276,6 +278,10 @@ export class WidgetCardComponent extends BaseWidget implements OnInit, AfterView
 ]
 })
 export class DashboardComponent implements AfterViewInit {
+
+  @ViewChild('timelineContainer', { static: false }) timelineContainer!: ElementRef;
+  
+  private timeline!: Timeline;
   
   private destroyRef = inject(DestroyRef); 
 
@@ -319,6 +325,56 @@ export class DashboardComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
+
+    const groups = new DataSet([
+      { id: 'raum_a', content: 'Raum A' },
+      { id: 'raum_b', content: 'Raum B' },
+      { id: 'raum_c', content: 'Raum C' },
+      { id: 'raum_d', content: 'Raum D' },
+      { id: 'raum_e', content: 'Raum E' },
+      { id: 'raum_f', content: 'Raum F' }
+    ]);
+
+    const items = new DataSet([
+      { id: 1, group: 'raum_a', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
+      { id: 2, group: 'raum_b', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
+      { id: 3, group: 'raum_a', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
+      { id: 4, group: 'raum_e', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
+      { id: 5, group: 'raum_d', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
+      { id: 6, group: 'raum_f', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
+      { id: 7, group: 'raum_f', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
+      { id: 8, group: 'raum_c', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
+      { id: 9, group: 'raum_c', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' }
+    ]);
+
+    const slotWidth = 200; 
+    const containerWidth = 1200; 
+    const visibleSlots = containerWidth / slotWidth;
+    const visibleHours = visibleSlots * 0.5;
+
+    const startDate = new Date('2026-05-31T08:00:00');
+    const endDate = new Date(startDate.getTime() + (visibleHours * 60 * 60 * 1000));
+
+    const options: TimelineOptions = {
+      orientation: 'top',
+      width: '100%',
+      verticalScroll: true,
+      moveable: true,
+      height: undefined,
+      stack: false,
+      zoomable: false,
+      min: '2026-05-31T00:00:00', 
+      max: '2026-05-31T24:00:00', 
+      start: '2026-05-31T08:00:00',
+      end: endDate,
+      timeAxis: { 
+        scale: 'minute', 
+        step: 30 
+      } as const
+    };
+
+    this.timeline = new Timeline(this.timelineContainer.nativeElement, items, groups, options);
+
     const grid: GridStack | undefined = this.dashboard.grid;
     if(grid) {
       this.widgetService.loadModule("desktop");

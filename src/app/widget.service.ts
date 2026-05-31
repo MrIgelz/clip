@@ -2,7 +2,7 @@ import { Injectable, TemplateRef } from '@angular/core';
 import { BehaviorSubject, catchError, combineLatest, EMPTY, map, Observable, of, Subject, switchMap } from 'rxjs';
 import { NgGridStackWidget } from 'gridstack/dist/angular';
 import { GridItemHTMLElement } from 'gridstack';
-import { Card } from 'primeng/card';
+import { Timeline } from "vis-timeline";
 
 // NEW
 export interface WidgetServiceMessage {

@@ -32,6 +32,8 @@
     "primeng": "^19.1.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "vis-data": "^8.0.4",
+    "vis-timeline": "^8.5.1",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
