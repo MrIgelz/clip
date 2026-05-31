@@ -1,14 +1,42 @@
-import { AfterViewInit, Component, DestroyRef, Directive, ElementRef, inject, Input, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, Directive, ElementRef, inject, Input, OnDestroy, OnInit, Self, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { GridItemHTMLElement, GridStack, GridStackNode } from 'gridstack';
 import { GridstackComponent, NgGridStackOptions, BaseWidget } from 'gridstack/dist/angular';
 import { CardModule } from 'primeng/card';
-import { DashboardWidget,  DashboardAction, WidgetService, DashboardCard } from '../widget.service';
+import { DashboardWidget,  DashboardAction, WidgetService, DashboardCard, WidgetServiceMessage } from '../widget.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import { map, Observable } from 'rxjs';
 import { PanelModule } from 'primeng/panel';
 import { CheckboxModule } from 'primeng/checkbox';
 import { FormsModule } from '@angular/forms';
+import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import { CalendarOptions } from '@fullcalendar/core/index.js';
+
+// NEW
+@Directive({
+  selector: 'full-calendar[cardType]'
+})
+export class CalendarWidgetDirective implements OnInit {
+  @Input('cardType') cardType!: string;
+
+  private widgetService: WidgetService = inject(WidgetService);
+  private destroyRef: DestroyRef = inject(DestroyRef); 
+
+  constructor(@Self() private calendar: FullCalendarComponent) {}
+
+  ngOnInit() {
+    if (this.cardType === '') return;
+    this.widgetService.message$.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((message: WidgetServiceMessage) => {
+      console.log(message)
+      if (message.receiver === this.cardType + "_calendar" && message.action === 'updateSize') {
+        this.calendar.getApi().updateSize();
+      }
+    });
+  };
+}
 
 @Directive({
   selector: '[namedCardTemplate]',
@@ -35,20 +63,65 @@ export class NamedTemplateDirective implements OnInit, OnDestroy {
 
 @Component({
   selector: 'card-template-component',
-  imports: [NamedTemplateDirective],
+  // NEW
+  //styles: '::ng-deep .fc .fc-view-harness { max-height: 200px !important; overflow-y: auto !important; }',
+  imports: [NamedTemplateDirective, FullCalendarModule, CalendarWidgetDirective],
   template: `
+    <ng-template namedCardTemplate="calendar">
+      <!-- NEW -->
+      <div>
+       <!--[style]="{
+          'max-height': typeof maxHeight === 'number' ? maxHeight + 'px' : maxHeight,
+          'overflow-y': 'auto'
+        }"-->
+        <full-calendar #fc cardType="calendar" [options]="calendarOptions"></full-calendar>
+      </div>  
+    </ng-template>
     <ng-template namedCardTemplate="timeLeave">
       <div>
         <h3>Dynamic Template</h3>
         <p>This content was defined in the first child component!</p>
       </div>
     </ng-template>
-    <ng-template namedCardTemplate="booking">
+    <ng-template  namedCardTemplate="booking">
       <p>Standard Body Content.</p>
     </ng-template>
   `
 })
-export class CardTemplateComponent {}
+export class CardTemplateComponent implements AfterViewInit {
+
+  @ViewChild('fc', {static: false}) set fc(fc:any) {
+    console.log("FC", fc); 
+  }
+  // NEW
+  //maxHeight: number | 'auto' = 'auto';
+
+  widgetService: WidgetService = inject(WidgetService);
+
+  calendarOptions: CalendarOptions = {
+    plugins: [timeGridPlugin],
+    initialView: 'timeGridDay',
+    slotDuration: { minutes: 30 },
+    // NEW
+    scrollTime: '08:00:00', 
+    height: 400,
+    events: [
+      { title: 'Meeting', start: new Date() }
+    ]
+  };
+
+  constructor() {
+  }
+
+  ngAfterViewInit(): void {
+    // NEW (This is example usage only)
+    setTimeout(() => this.widgetService.sendMessage({
+      receiver: 'widgetService',
+      sender: 'calendar',
+      action: 'noContentRemove'
+    }), 1115000);
+  }
+}
 
 
 @Component({
@@ -66,7 +139,9 @@ export class CardTemplateComponent {}
       </div>
     </div>
     @if (templateType !== 'placeholder') {
-      <ng-container *ngTemplateOutlet="template$ | async"></ng-container>
+      <div>
+        <ng-container *ngTemplateOutlet="template$ | async"></ng-container>
+    </div>
     } @else { 
       <p-panel [header]="cardType" [style]="{'margin': '5px'}">
         <p>Diese Karte dient als Platzhalter. Sie wird nur eingeblendet, falls valide Daten vorhanden sind.</p>
@@ -148,7 +223,10 @@ export class WidgetCardComponent extends BaseWidget implements OnInit, AfterView
 
     this.template$ = this.widgetService.templateRegistry$.pipe(
       takeUntilDestroyed(this.destroyRef),
-      map((templateMap: Map<string, TemplateRef<any>>) => templateMap.get(this.templateType) || null)
+      map((templateMap: Map<string, TemplateRef<any>>) => {
+        console.log("Getting template", templateMap.get(this.templateType))
+        return templateMap.get(this.templateType) || null
+      })
     );
   }
 
@@ -220,7 +298,7 @@ export class DashboardComponent implements AfterViewInit {
     acceptWidgets: (el: Element) => this.isEditable,
     sizeToContent: false,
     margin: 5,
-    minRow: 6,
+    minRow: 55,
     cellHeight: 10
   }
 
@@ -267,8 +345,15 @@ export class DashboardComponent implements AfterViewInit {
         }
       });
 
+      // NEW
       grid.on('resizestop', (event: Event, el: GridItemHTMLElement) => {
-        if (el) grid.resizeToContent(el);
+        if (el) {
+          grid.resizeToContent(el);
+          this.widgetService.sendMessage({
+            receiver: el.gridstackNode!.id! + "_calendar",
+            action: 'updateSize'
+          });
+        }
       });
 
       this.widgetService.isUsingDefault$.pipe(
@@ -299,13 +384,18 @@ export class DashboardComponent implements AfterViewInit {
             grid.load(action.widgets);
             grid.getGridItems().forEach(item => grid.resizeToContent(item));
         } else {
-          if (!this.editableCards) return;
+          // NEW
+          //if (!this.editableCards) return;
 
           const allItems: GridItemHTMLElement[] = grid.getGridItems();
           const item: GridItemHTMLElement | undefined = allItems.find((item: GridItemHTMLElement) =>
             item.gridstackNode?.id === action.widget.id);
-          const editableCard: DashboardCard | undefined = this.editableCards.find(
-            card => card.cardType === action.widget.id);
+          // NEW
+          let editableCard: DashboardCard | undefined;
+          if (this.editableCards) {
+            editableCard = this.editableCards.find(
+              card => card.cardType === action.widget.id);
+          }
 
           switch (action.type) {
             case 'add':
@@ -319,10 +409,15 @@ export class DashboardComponent implements AfterViewInit {
                 grid.resizeToContent(addedItem)
               }
               break;
+            // NEW
             case 'remove':
-              if (item && editableCard) {
-                editableCard.height = 1;
-                editableCard.enabled = false;
+            case 'noContentRemove':
+              console.log("Remove")
+              if (item  && (editableCard || action.type === 'noContentRemove')) {
+                if (action.type === 'remove') {
+                  editableCard!.height = 1; 
+                  editableCard!.enabled = false;
+                }
                 grid.removeWidget(item);
               }
           }

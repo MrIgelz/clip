@@ -1,7 +1,15 @@
 import { Injectable, TemplateRef } from '@angular/core';
-import { BehaviorSubject, catchError, combineLatest, EMPTY, map, Observable, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, EMPTY, map, Observable, of, Subject, switchMap } from 'rxjs';
 import { NgGridStackWidget } from 'gridstack/dist/angular';
 import { GridItemHTMLElement } from 'gridstack';
+import { Card } from 'primeng/card';
+
+// NEW
+export interface WidgetServiceMessage {
+  receiver: string;
+  sender?: string;
+  action: string;
+}
 
 export interface DashboardCardRequest {
   uuid: string;
@@ -44,6 +52,8 @@ export type DashboardAction =
   { type: 'load'; widgets: DashboardWidget[]; } | 
   { type: 'add'; widget: DashboardWidget; } | 
   { type: 'remove'; widget: DashboardWidget; } | 
+  // NEW
+  { type: 'noContentRemove'; widget: DashboardWidget } |
   null;
 
 @Injectable()
@@ -73,15 +83,29 @@ export class WidgetService {
       {
         uuid: "",
         parentUuid: "",
-        cardType: "timeLeave",
-        name: "TimeLeave",
+        cardType: "calendar",
+        name: "Calendar",
         positionX: 2,
         positionY: 2,
         width: 3,
         height: 2,
         resizeable: true,
-        enabled: true,
-        isSystemCard: true,
+        enabled: false,
+        isSystemCard: false,
+        hideOnEmpty: false
+      },
+      {
+        uuid: "",
+        parentUuid: "",
+        cardType: "calendarr",
+        name: "Duplicate",
+        positionX: 2,
+        positionY: 2,
+        width: 3,
+        height: 2,
+        resizeable: true,
+        enabled: false,
+        isSystemCard: false,
         hideOnEmpty: false
       },
       {
@@ -94,12 +118,33 @@ export class WidgetService {
         width: 3,
         height: 2,
         resizeable: true,
-        enabled: true,
+        enabled: false,
         isSystemCard: false,
         hideOnEmpty: true
       },
     ];
   } 
+
+  // NEW
+  private message = new Subject<WidgetServiceMessage>();
+  message$ = this.message.asObservable();
+  sendMessage(message: WidgetServiceMessage): void {
+    if (message.receiver === 'widgetService') {
+      if (message.action === 'noContentRemove') {
+        const card: DashboardCard | undefined = this.getAllCards().find((card: DashboardCard) => card.cardType === message.sender);
+        if (card) {
+          const widgetDummy: DashboardWidget = {
+            id: card.cardType,
+            isEditable: false,
+            card
+          }
+          this.removeNoConntentWidget(widgetDummy);
+        }
+      }
+    } else {
+      this.message.next(message);
+    }
+  }
 
   private createEditableCardsFromResponse(cardResponses: DashboardCardResponse[]): DashboardCard[] {
     const cards: DashboardCard[] = this.getAllCards();
@@ -270,14 +315,7 @@ export class WidgetService {
           useDefault: false
         },
         cards: [
-          {
-            uuid: "",
-            parentUuid: "",
-            cardType: "qwerty",
-            positionX: 1,
-            positionY: 1,
-            width: 2
-          }
+        
         ]
       };
 
@@ -362,6 +400,15 @@ export class WidgetService {
   addWidget(widget: DashboardWidget): void {
     this.dashboardAction.next({
       type: 'add',
+      widget
+    });
+  }
+
+  // NEW
+  removeNoConntentWidget(widget: DashboardWidget): void {
+    if (this.isEditable.value) return;
+    this.dashboardAction.next({
+      type: 'noContentRemove',
       widget
     });
   }
