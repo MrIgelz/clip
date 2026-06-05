@@ -10,6 +10,8 @@ import { PanelModule } from 'primeng/panel';
 import { CheckboxModule } from 'primeng/checkbox';
 import { FormsModule } from '@angular/forms';
 import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
+import { MessageModule } from 'primeng/message';
+import { ButtonModule } from 'primeng/button';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { CalendarOptions } from '@fullcalendar/core/index.js';
 import { Timeline, TimelineOptions } from 'vis-timeline/standalone';
@@ -269,12 +271,16 @@ export class WidgetCardComponent extends BaseWidget implements OnInit, AfterView
   templateUrl: 'dashboard.component.html',
   providers: [WidgetService],
   imports: [
+    CommonModule,
     FormsModule,
     JsonPipe,
     CheckboxModule,
+    CardModule,
     GridstackComponent,
     CardTemplateComponent,
-    CardTemplateComponent
+    CardTemplateComponent,
+    MessageModule,
+    ButtonModule
 ]
 })
 export class DashboardComponent implements AfterViewInit {
@@ -297,7 +303,7 @@ export class DashboardComponent implements AfterViewInit {
   dashboard!: GridstackComponent;
 
   gridOptions: NgGridStackOptions = {
-    handle: '.widget-header',
+    //handle: '.widget-header',
     resizable: {
       handles: 'w, e'
     },
@@ -332,13 +338,18 @@ export class DashboardComponent implements AfterViewInit {
       { id: 'raum_c', content: 'Raum C' },
       { id: 'raum_d', content: 'Raum D' },
       { id: 'raum_e', content: 'Raum E' },
-      { id: 'raum_f', content: 'Raum F' }
+      { id: 'raum_f', content: 'Raum F' },
+      { id: '1', content: 'Raum A' },
+      { id: '2', content: 'Raum B' },
+      { id: '3', content: 'Raufsdsdfm C' },
+      { id: '4', content: 'Raum D' },
+      { id: '5', content: 'Raum E' },
+      { id: '6', content: 'Raum F' },
+      { id: 'raum_x', content: 'Raum A', nestedGroups: ['raum_a', 'raum_b'], className: 'no-bookings-parent' }
     ]);
 
     const items = new DataSet([
-      { id: 1, group: 'raum_a', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
-      { id: 2, group: 'raum_b', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
-      { id: 3, group: 'raum_a', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
+      { id: 10, group: '5', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
       { id: 4, group: 'raum_e', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
       { id: 5, group: 'raum_d', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
       { id: 6, group: 'raum_f', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
@@ -347,7 +358,7 @@ export class DashboardComponent implements AfterViewInit {
       { id: 9, group: 'raum_c', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' }
     ]);
 
-    const slotWidth = 200; 
+    const slotWidth = 55; 
     const containerWidth = 1200; 
     const visibleSlots = containerWidth / slotWidth;
     const visibleHours = visibleSlots * 0.5;
@@ -361,15 +372,22 @@ export class DashboardComponent implements AfterViewInit {
       verticalScroll: true,
       moveable: true,
       height: undefined,
-      stack: false,
+      
       zoomable: false,
       min: '2026-05-31T00:00:00', 
       max: '2026-05-31T24:00:00', 
       start: '2026-05-31T08:00:00',
       end: endDate,
+      stack: false,
+      showMajorLabels: false,
+      margin: {
+        item: 6,
+        axis: 3
+      },
       timeAxis: { 
         scale: 'minute', 
-        step: 30 
+        step: 30,
+        
       } as const
     };
 

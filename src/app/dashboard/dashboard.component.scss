@@ -2,14 +2,37 @@
   border: 1px solid black;
 }
 
-
 .timeline-wrapper {
   padding: 20px;
 }
 
-/* Optional: Eigene Anpassung der Timeline-Items */
-.vis-item {
-  background-color: #e0f2fe;
-  border-color: #38bdf8;
-  color: #0369a1;
+::ng-deep .vis-item {
+  background-color: rgb(114, 220, 255);
+  border-color: gray;
+  color: black;
+}
+
+::ng-deep .vis-group.no-bookings-parent,
+::ng-deep .vis-label.no-bookings-parent {
+  background-color: #f3f4f6; 
+}
+
+::ng-deep .vis-label .vis-inner {
+  height: 30px;
+  align-content: center;
+}
+
+::ng-deep .vis-item {
+  height: 24px;
+}
+
+::ng-deep .vis-item-content {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 1px 5px !important;
+}
+
+::ng-deep .vis-panel {
+  font-size: 16px;
 }
