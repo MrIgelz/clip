@@ -99,10 +99,10 @@ export class TimelineWidgetDirective implements AfterViewInit, OnDestroy {
   private updateSlotWidth(cardWidth: number): void {
     const divElement = this.containerRef.nativeElement as  HTMLDivElement;
     if (cardWidth > 700) {
-      this.slotWidth = 250;
+      this.slotWidth = 300;
       divElement.classList.remove('small-time-slots');
     }  else {
-      this.slotWidth = 150;
+      this.slotWidth = 200;
       divElement.classList.add('small-time-slots');
     }
   }
@@ -190,8 +190,8 @@ export class NamedTemplateDirective implements OnInit, OnDestroy {
   //styles: '::ng-deep .fc .fc-view-harness { max-height: 200px !important; overflow-y: auto !important; }',
   imports: [TimelineWidgetDirective, NamedTemplateDirective, FullCalendarModule, CalendarWidgetDirective],
   template: `
-      <ng-template namedCardTemplate="calendar3" let-cardDontainer>
-        <div timeline [cardContainer]=cardDontainer></div>
+      <ng-template namedCardTemplate="calendar3" let-cardContainer>
+        <div timeline [cardContainer]=cardContainer [groups]=groups [items]=items (loaded)="loadAllBookings()"></div>
       </ng-template>
       <ng-template namedCardTemplate="calendar2">
       <!-- NEW -->
@@ -230,6 +230,9 @@ export class CardTemplateComponent implements AfterViewInit {
   private isAllBookingsLoading = false; 
   private isBookingTasksLoading = false;
 
+  groups: DataGroup[] = [];
+  items: DataItem[] = [];
+
   loadMyBookings(): void {
     if (this.isMyBookingsLoading) return; 
     this.isMyBookingsLoading = true; 
@@ -238,6 +241,36 @@ export class CardTemplateComponent implements AfterViewInit {
   loadAllBookings(): void {
     if (this.isAllBookingsLoading) return; 
     this.isAllBookingsLoading = true; 
+
+    setTimeout(() => {
+      this.groups = [
+        { id: 'raum_a', content: 'Raum A' },
+        { id: 'raum_b', content: 'Raum B' },
+        { id: 'raum_c', content: 'Raum C' },
+        { id: 'raum_d', content: 'Raum D' },
+        { id: 'raum_e', content: 'Raum E' },
+        { id: 'raum_f', content: 'Raum F' },
+        { id: '1', content: 'Raum A' },
+        { id: '2', content: 'Raum B' },
+        { id: '3', content: 'Raufsdsdfgdfgfm C' },
+        { id: '4', content: 'Raum D' },
+        { id: '5', content: 'Raum E' },
+        { id: '6', content: 'Raum F' },
+        { id: 'raum_x', content: 'Raum A', nestedGroups: ['raum_a', 'raum_b'], className: 'no-bookings-parent' }
+      ];
+
+      this.items = [
+        { id: 10, group: '5', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
+        { id: 4, group: 'raum_e', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
+        { id: 5, group: 'raum_d', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
+        { id: 6, group: 'raum_f', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
+        { id: 7, group: 'raum_f', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
+        { id: 8, group: 'raum_c', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
+        { id: 9, group: 'raum_c', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
+
+        { id: '11', group: 'raum_f', content: '', start: '2026-05-31T02:00:00', end: '2026-05-31T7:00:00', type: 'background' }
+      ];
+    }, 0);
   }
 
   loadBookingTasks(): void {
@@ -515,67 +548,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-
-    const groups = new DataSet([
-      { id: 'raum_a', content: 'Raum A' },
-      { id: 'raum_b', content: 'Raum B' },
-      { id: 'raum_c', content: 'Raum C' },
-      { id: 'raum_d', content: 'Raum D' },
-      { id: 'raum_e', content: 'Raum E' },
-      { id: 'raum_f', content: 'Raum F' },
-      { id: '1', content: 'Raum A' },
-      { id: '2', content: 'Raum B' },
-      { id: '3', content: 'Raufsdsdfgdfgfm C' },
-      { id: '4', content: 'Raum D' },
-      { id: '5', content: 'Raum E' },
-      { id: '6', content: 'Raum F' },
-      { id: 'raum_x', content: 'Raum A', nestedGroups: ['raum_a', 'raum_b'], className: 'no-bookings-parent' }
-    ]);
-
-    const items = new DataSet([
-      { id: 10, group: '5', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
-      { id: 4, group: 'raum_e', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
-      { id: 5, group: 'raum_d', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
-      { id: 6, group: 'raum_f', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
-      { id: 7, group: 'raum_f', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
-      { id: 8, group: 'raum_c', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
-      { id: 9, group: 'raum_c', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
-
-      { id: '11', group: 'raum_f', content: '', start: '2026-05-31T02:00:00', end: '2026-05-31T7:00:00', type: 'background' }
-    ]);
-
-    const slotWidth = 55; 
-    const containerWidth = 1200; 
-    const visibleSlots = containerWidth / slotWidth;
-    const visibleHours = visibleSlots * 0.5;
-
-    const startDate = new Date('2026-05-31T08:00:00');
-    const endDate = new Date(startDate.getTime() + (visibleHours * 60 * 60 * 1000));
-
-    const options: TimelineOptions = {
-      orientation: 'top',
-      width: '100%',
-      verticalScroll: true,
-      moveable: true,
-      zoomable: false,
-      min: '2026-05-31T00:00:00', 
-      max: '2026-05-31T24:00:00', 
-      start: '2026-05-31T08:00:00',
-      end: endDate,
-      stack: false,
-      showMajorLabels: false,
-      margin: {
-        item: 6,
-        axis: 3
-      },
-      timeAxis: { 
-        scale: 'minute', 
-        step: 30
-      } 
-    };
-
-   // this.timeline = new Timeline(this.timelineContainer.nativeElement, items, groups, options);
-   // this.timeline.getWindow().start
     const grid: GridStack | undefined = this.dashboard.grid;
     if(grid) {
       this.widgetService.loadModule("desktop");
