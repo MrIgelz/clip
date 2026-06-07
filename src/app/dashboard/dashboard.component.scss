@@ -7,6 +7,7 @@
 }
 
 ::ng-deep .vis-item {
+  height: 24px;
   background-color: rgb(114, 220, 255);
   border-color: gray;
   color: black;
@@ -17,20 +18,37 @@
   background-color: #f3f4f6; 
 }
 
-::ng-deep .vis-label .vis-inner {
-  height: 30px;
-  align-content: center;
+::ng-deep .small-time-slots .vis-time-axis .vis-text {
+  padding: 0;
+  writing-mode: sideways-lr; 
+  text-align: center;
+  font-size: 17px;
+  height: 52px; 
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-::ng-deep .vis-item {
-  height: 24px;
+::ng-deep .vis-label {
+  &::before {
+    padding-left: 3px;
+    transform: translateY(-4px);
+  }
+  .vis-inner {
+    align-content: center;
+    height: 30px;
+    padding-left: 8px !important;
+    transform: translateY(-4px);
+  }
 }
 
 ::ng-deep .vis-item-content {
-  height: 100%;
+  position: relative;
+  top: -3px;
   display: flex;
   align-items: center;
-  padding: 1px 5px !important;
+  height: 100%;
+  padding: 0 5px !important;
 }
 
 ::ng-deep .vis-panel {

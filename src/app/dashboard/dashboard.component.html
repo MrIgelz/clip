@@ -28,46 +28,158 @@
       <button (click)="toggleEdit()">Toggle Edit {{ isEditable }}</button>
       <button (click)="widgetService.save()">Save</button>
       <button (click)="widgetService.restore()">Restore</button>
-      <p-checkbox [(ngModel)]="isUsingDefault" (onChange)="widgetService.useDefault($event.checked)"  [binary]="true" [disabled]="editableCards === null" />
+      <p-selectbutton [options]="dashboardOptions" 
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="isUsingDefault ? 'DEFAULT' : 'CUSTOM'"
+                      (ngModelChange)="onDashboardChange($event)"
+                      [allowEmpty]="false"/>
+      <p-button label="Urlaubskonto" 
+                icon="fa-solid fa-umbrella-beach" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Zeitkonto" 
+                icon="fa-solid fa-clock" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Überstundenkonto" 
+                icon="fa-solid fa-hourglass-start" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Erinnerung" 
+                icon="fa-solid fa-cake-candles" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Blog/News" 
+                icon="fa-solid fa-newspaper" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Lizenzen" 
+                icon="fa-regular fa-id-card" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Offline Stechuhren" 
+                icon="fa-solid fa-tablet-alt" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Vertretung" 
+                icon="fa-solid fa-user-group" 
+                pTooltip="Auf das Dashboard ziehen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Speichern" 
+                icon="fa-solid fa-floppy-disk" 
+                pTooltip="Änderungen am Dashboard speichern"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Änderungen verwerfen" 
+                severity="danger" 
+                icon="fa-solid fa-rotate-left" 
+                pTooltip="Alle ungespeicherten Änderungen verwerfen"
+                [showDelay]="300"
+                fluid="true">
+      </p-button>
+      <p-button label="Schließen" 
+                severity="secondary" 
+                icon="fa-solid fa-door-open" 
+                pTooltip="Bearbeitungsmodus verlassen"
+                [showDelay]="300"
+                fluid="true" 
+                (onClick)="widgetService.setEditableStatus(false)">
+      </p-button>
+      @if (isEditable && isUsingDefault && !showHintCard) {
+        <span class="inline-flex -translate-y-[18px] max-w-[20px] items-center justify-center w-5 h-5 rounded-full shadow-[inset_0_0_0_1.5px_var(--p-button-text-info-color)]"
+              pTooltip="Optionen für Standard Dashboard anzeigen"
+              (click)="showHintCard = true;">
+          <i class="fa-solid fa-info text-[10px] text-[var(--p-button-text-info-color)]"></i>
+        </span>
+      }
     </div>
   </div>
   <div class="col-8">
     <div class="timeline-wrapper">
       <h2>Meine Vis-Timeline</h2>
-      <div #timelineContainer></div>
+      
     </div>
     <div class="relative">
       <div class="absolute inset-0 bg-white"></div>
-      <gridstack [options]="gridOptions" class="opacity-70">
+      <gridstack [options]="gridOptions" [ngClass]="{'opacity-70': isEditable && isUsingDefault}">
         <div empty-content>message when grid is empty</div>
       </gridstack>
-      <div class="absolute top-0 right-0 m-2">
-        <i class="fa-solid fa-lock text-[var(--p-button-text-warn-color)]"></i>
-      </div>
-      <p-card header="Standard-Dashboard wird verwendet"
-              styleClass="inline-block absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 border-2 border-[var(--p-content-border-color)] shadow-6">
-        <div class="col-12">
-          <span class="inline-flex max-w-[20px] items-center justify-center  w-5 h-5 rounded-full shadow-[inset_0_0_0_1.5px_var(--p-button-text-info-color)]">
-            <i class="fa-solid fa-info text-[10px] text-[var(--p-button-text-info-color)]"></i>
-          </span>
-          <span class="font-medium text-color text-left">
-            Das Standard-Layout ist schreibgeschützt.
-          </span>
+      @if (isEditable && isUsingDefault) {
+        <div class="absolute top-0 right-0 m-2">
+          <i class="fa-solid fa-lock text-[var(--p-button-text-warn-color)]"></i>
         </div>
-        <div class="col-12">
-          <p-button label="Als eigenes Dashboard importieren" 
-                    icon="fa-solid fa-copy" 
-                    severity="secondary"
-                    fluid="true" 
-                    styleClass="p-button-sm p-button-raised"
-                    (onClick)="widgetService.save()">
-          </p-button>
-          <span class="block mt-2 max-w-sm text-xs text-[var(--p-text-muted-color)] leading-none">
-            <i class="fa-solid fa-exclamation text-xs mr-1 text-[var(--p-button-text-warn-color)]"></i>
-            <span>Das eigene Dashboard wird dabei überschrieben. Erst durch Klicken auf „Speichern“ wird die Änderung dauerhaft übernommen.</span>
-          </span>
-        </div>
-      </p-card>
+        @if (showHintCard) {
+          <p-card header="Standard-Dashboard wird verwendet"
+                  styleClass="inline-block absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 border-2 border-[var(--p-content-border-color)] shadow-6">
+            <p-button icon="fa-solid fa-xmark"
+                      variant="text"
+                      severity="secondary"
+                      class="absolute top-0 right-0 p-button-sm"
+                      (onClick)="showHintCard = false;">
+            </p-button>
+            <div class="col-12 mb-3">
+              <span class="inline-flex max-w-[20px] items-center justify-center w-5 h-5 rounded-full shadow-[inset_0_0_0_1.5px_var(--p-button-text-info-color)]">
+                <i class="fa-solid fa-info text-[10px] text-[var(--p-button-text-info-color)]"></i>
+              </span>
+              <span class="font-medium text-color text-left">
+                Dieses Layout ist schreibgeschützt.
+              </span>
+            </div>
+            <p-divider></p-divider>
+            <div class="col-12">
+              <p-button label="Eigenes Dashboard aktivieren" 
+                        icon="fa-solid fa-user-gear" 
+                        severity="secondary"
+                        fluid="true" 
+                        [outlined]="true"
+                        styleClass="p-button-sm p-button-raised"
+                        (onClick)="widgetService.useDefault(false)">
+              </p-button>
+            </div>
+            <div class="col-12">
+              <p-button label="Standard als eigenes Dashboard importieren*" 
+                        icon="fa-solid fa-clone" 
+                        severity="secondary"
+                        fluid="true" 
+                        [outlined]="true"
+                        styleClass="p-button-sm p-button-raised"
+                        (onClick)="widgetService.importDefaultAsCustom()">
+              </p-button>
+              <span class="block mt-2 max-w-sm text-xs text-[var(--p-text-muted-color)] leading-none">
+                <i class="fa-solid fa-exclamation text-xs mr-1 text-[var(--p-button-text-warn-color)]"></i>
+                <span>* Das eigene Dashboard wird dabei überschrieben. Erst durch Klicken auf „Speichern“ wird die Änderung dauerhaft übernommen.</span>
+              </span>
+            </div>
+            <p-divider></p-divider>
+            <div class="col-12 text-center mt-2">
+              <p-button label="Schließen" 
+                        [link]="true" 
+                        severity="secondary"
+                        styleClass="p-button-sm !text-[var(--p-text-color)]"
+                        (onClick)="showHintCard = false;">
+              </p-button>
+            </div>
+          </p-card>
+        }
+      }
     </div>
   </div>
 </div>

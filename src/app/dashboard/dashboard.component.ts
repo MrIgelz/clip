@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, DestroyRef, Directive, ElementRef, inject, Input, OnDestroy, OnInit, Self, TemplateRef, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, Directive, ElementRef, EventEmitter, inject, Input, OnDestroy, OnInit, Output, Self, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { GridItemHTMLElement, GridStack, GridStackNode } from 'gridstack';
 import { GridstackComponent, NgGridStackOptions, BaseWidget } from 'gridstack/dist/angular';
@@ -13,9 +13,128 @@ import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular
 import { MessageModule } from 'primeng/message';
 import { ButtonModule } from 'primeng/button';
 import timeGridPlugin from '@fullcalendar/timegrid';
+import listPlugin from '@fullcalendar/list';
 import { CalendarOptions } from '@fullcalendar/core/index.js';
-import { Timeline, TimelineOptions } from 'vis-timeline/standalone';
+import { DataGroup, DataItem, Timeline, TimelineOptions } from 'vis-timeline/standalone';
 import { DataSet } from 'vis-data';  
+import { DividerModule } from 'primeng/divider';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { TooltipModule } from 'primeng/tooltip';
+
+@Directive({
+  selector: '[timeline]'
+})
+export class TimelineWidgetDirective implements AfterViewInit, OnDestroy {
+
+  private slotWidth!: number;
+
+  private resizeObserver!: ResizeObserver;
+
+  private timeline!: Timeline;
+  private _groups = new DataSet<DataGroup>();
+  private _items = new DataSet<DataItem>();
+
+  @Input('cardContainer') 
+  cardContainer!: HTMLDivElement;
+
+  @Input('groups') 
+  set groups(groups: DataGroup[]) {
+    if (groups) {
+      this._groups.clear();
+      this._groups.add(groups);
+    }
+  }
+
+  @Input('items') 
+  set items(items: DataItem[]) {
+    if (items) {
+      this._items.clear();
+      this._items.add(items);
+    }
+  };
+
+  @Output() loaded = new EventEmitter<void>();
+
+  constructor(@Self() private containerRef: ElementRef) {}
+
+  ngAfterViewInit() {
+    
+    this.timeline = new Timeline(this.containerRef.nativeElement, this._items, this._groups, this.getOptions());
+    this.loaded.emit();
+    this.setupResizeObserver();
+  };
+
+  private setupResizeObserver() {
+    this.resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        if (width > 0 && this.timeline) {
+          const start: Date = this.timeline.getWindow().start;
+          const end: Date = this.getEndDate(start, width);
+          this.timeline.setWindow( start, end );
+        }
+      }
+    });
+
+    this.resizeObserver.observe(this.cardContainer);
+  }
+
+  ngOnDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    if (this.timeline) {
+      this.timeline.destroy();
+    }
+  }
+
+  private getEndDate(startDate: Date, cardWidth: number): Date {
+    this.updateSlotWidth(cardWidth);
+    const slotDuration: number = 30; 
+    const numSlots: number = cardWidth / this.slotWidth;
+    const visibleHours = (numSlots * 60) / slotDuration;
+    return new Date(startDate.getTime() + (visibleHours * 60 * 60 * 1000));
+  }
+
+  private updateSlotWidth(cardWidth: number): void {
+    const divElement = this.containerRef.nativeElement as  HTMLDivElement;
+    if (cardWidth > 700) {
+      this.slotWidth = 250;
+      divElement.classList.remove('small-time-slots');
+    }  else {
+      this.slotWidth = 150;
+      divElement.classList.add('small-time-slots');
+    }
+  }
+
+  private getOptions(): TimelineOptions {
+    const min: Date = new Date();
+    min.setHours(0, 0, 0, 0);
+    const max: Date = new Date(min.getTime() + 24 * 60 * 60 * 1000);
+    const start: Date = new Date(min.getTime() + 8 * 60 * 60 * 1000);
+    const width: number = this.cardContainer.offsetWidth;
+    const end: Date = this.getEndDate(start, width);
+
+    return {
+      orientation: 'top',
+      width: '100%',
+      verticalScroll: true,
+      moveable: true,
+      zoomable: false,
+      stack: false,
+      showMajorLabels: false,
+      margin: {
+        item: 6,
+        axis: 3
+      },
+      timeAxis: { 
+        scale: 'minute', 
+        step: 30
+      },
+      min, max, start, end   
+    };
+  }
+}
 
 // NEW
 @Directive({
@@ -69,8 +188,21 @@ export class NamedTemplateDirective implements OnInit, OnDestroy {
   selector: 'card-template-component',
   // NEW
   //styles: '::ng-deep .fc .fc-view-harness { max-height: 200px !important; overflow-y: auto !important; }',
-  imports: [NamedTemplateDirective, FullCalendarModule, CalendarWidgetDirective],
+  imports: [TimelineWidgetDirective, NamedTemplateDirective, FullCalendarModule, CalendarWidgetDirective],
   template: `
+      <ng-template namedCardTemplate="calendar3" let-cardDontainer>
+        <div timeline [cardContainer]=cardDontainer></div>
+      </ng-template>
+      <ng-template namedCardTemplate="calendar2">
+      <!-- NEW -->
+      <div>
+       <!--[style]="{
+          'max-height': typeof maxHeight === 'number' ? maxHeight + 'px' : maxHeight,
+          'overflow-y': 'auto'
+        }"-->
+        <full-calendar #fc2 cardType="calendar2" [options]="calendarOptions2"></full-calendar>
+      </div>  
+    </ng-template>
     <ng-template namedCardTemplate="calendar">
       <!-- NEW -->
       <div>
@@ -94,9 +226,25 @@ export class NamedTemplateDirective implements OnInit, OnDestroy {
 })
 export class CardTemplateComponent implements AfterViewInit {
 
-  @ViewChild('fc', {static: false}) set fc(fc:any) {
-    console.log("FC", fc); 
+  private isMyBookingsLoading = false; 
+  private isAllBookingsLoading = false; 
+  private isBookingTasksLoading = false;
+
+  loadMyBookings(): void {
+    if (this.isMyBookingsLoading) return; 
+    this.isMyBookingsLoading = true; 
   }
+
+  loadAllBookings(): void {
+    if (this.isAllBookingsLoading) return; 
+    this.isAllBookingsLoading = true; 
+  }
+
+  loadBookingTasks(): void {
+    if (this.isBookingTasksLoading) return; 
+    this.isBookingTasksLoading = true; 
+  }
+
   // NEW
   //maxHeight: number | 'auto' = 'auto';
 
@@ -104,14 +252,34 @@ export class CardTemplateComponent implements AfterViewInit {
 
   calendarOptions: CalendarOptions = {
     plugins: [timeGridPlugin],
+    headerToolbar: false,
     initialView: 'timeGridDay',
     slotDuration: { minutes: 30 },
     // NEW
     scrollTime: '08:00:00', 
     height: 400,
+    //timeZone: 'local',
     events: [
       { title: 'Meeting', start: new Date() }
-    ]
+    ],
+    datesSet(arg) {
+      console.log(arg)
+    },
+  };
+
+  calendarOptions2: CalendarOptions = {
+    plugins: [listPlugin],
+    headerToolbar: false,
+    initialView: 'listDay',
+    slotDuration: { minutes: 30 },
+    height: 400,
+    //timeZone: 'local',
+    events: [
+      { title: 'Meeting', start: new Date() }
+    ],
+    datesSet(arg) {
+      console.log(arg)
+    },
   };
 
   constructor() {
@@ -144,7 +312,7 @@ export class CardTemplateComponent implements AfterViewInit {
     </div>
     @if (templateType !== 'placeholder') {
       <div>
-        <ng-container *ngTemplateOutlet="template$ | async"></ng-container>
+        <ng-container *ngTemplateOutlet="(template$ | async); context: { $implicit: container }"></ng-container>
     </div>
     } @else { 
       <p-panel [header]="cardType" [style]="{'margin': '5px'}">
@@ -280,10 +448,13 @@ export class WidgetCardComponent extends BaseWidget implements OnInit, AfterView
     CardTemplateComponent,
     CardTemplateComponent,
     MessageModule,
-    ButtonModule
+    ButtonModule,
+    DividerModule,
+    SelectButtonModule,
+    TooltipModule
 ]
 })
-export class DashboardComponent implements AfterViewInit {
+export class DashboardComponent implements OnInit, AfterViewInit {
 
   @ViewChild('timelineContainer', { static: false }) timelineContainer!: ElementRef;
   
@@ -293,9 +464,11 @@ export class DashboardComponent implements AfterViewInit {
 
   widgetService: WidgetService = inject(WidgetService);
 
+  showHintCard: boolean = false;
   isUsingDefault: boolean = true;
-
   isEditable: boolean = false;
+
+  dashboardOptions: {label: string, value: 'DEFAULT' | 'CUSTOM'}[] = [];
 
   editableCards: DashboardCard[] | null = null;
 
@@ -330,6 +503,17 @@ export class DashboardComponent implements AfterViewInit {
     )}, 200);
   }
 
+  ngOnInit(): void {
+    this.dashboardOptions = [
+      { label: 'Eigenes Dashboard', value: 'CUSTOM' },
+      { label: 'Standard Dashboard', value: 'DEFAULT' }
+    ];
+  }
+
+  onDashboardChange(dashboard: 'DEFAULT' | 'CUSTOM'): void {
+    this.widgetService.useDefault(dashboard === 'DEFAULT');
+  }
+
   ngAfterViewInit() {
 
     const groups = new DataSet([
@@ -341,7 +525,7 @@ export class DashboardComponent implements AfterViewInit {
       { id: 'raum_f', content: 'Raum F' },
       { id: '1', content: 'Raum A' },
       { id: '2', content: 'Raum B' },
-      { id: '3', content: 'Raufsdsdfm C' },
+      { id: '3', content: 'Raufsdsdfgdfgfm C' },
       { id: '4', content: 'Raum D' },
       { id: '5', content: 'Raum E' },
       { id: '6', content: 'Raum F' },
@@ -355,7 +539,9 @@ export class DashboardComponent implements AfterViewInit {
       { id: 6, group: 'raum_f', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
       { id: 7, group: 'raum_f', content: 'Meeting', start: '2026-05-31T09:00:00', end: '2026-05-31T11:00:00' },
       { id: 8, group: 'raum_c', content: 'Kundenpräsentation', start: '2026-05-31T10:00:00', end: '2026-05-31T12:00:00' },
-      { id: 9, group: 'raum_c', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' }
+      { id: 9, group: 'raum_c', content: 'Workshop', start: '2026-05-31T13:00:00', end: '2026-05-31T16:00:00' },
+
+      { id: '11', group: 'raum_f', content: '', start: '2026-05-31T02:00:00', end: '2026-05-31T7:00:00', type: 'background' }
     ]);
 
     const slotWidth = 55; 
@@ -371,8 +557,6 @@ export class DashboardComponent implements AfterViewInit {
       width: '100%',
       verticalScroll: true,
       moveable: true,
-      height: undefined,
-      
       zoomable: false,
       min: '2026-05-31T00:00:00', 
       max: '2026-05-31T24:00:00', 
@@ -386,13 +570,12 @@ export class DashboardComponent implements AfterViewInit {
       },
       timeAxis: { 
         scale: 'minute', 
-        step: 30,
-        
-      } as const
+        step: 30
+      } 
     };
 
-    this.timeline = new Timeline(this.timelineContainer.nativeElement, items, groups, options);
-
+   // this.timeline = new Timeline(this.timelineContainer.nativeElement, items, groups, options);
+   // this.timeline.getWindow().start
     const grid: GridStack | undefined = this.dashboard.grid;
     if(grid) {
       this.widgetService.loadModule("desktop");
@@ -432,11 +615,19 @@ export class DashboardComponent implements AfterViewInit {
 
       this.widgetService.isUsingDefault$.pipe(
         takeUntilDestroyed(this.destroyRef)
-      ).subscribe(isUsingDefault => this.isUsingDefault = isUsingDefault);
+      ).subscribe(isUsingDefault => {
+        if(isUsingDefault !== this.isUsingDefault) {
+          this.showHintCard = this.isEditable && isUsingDefault;
+        }
+        this.isUsingDefault = isUsingDefault;
+      });
 
       this.widgetService.isEditable$.pipe(
         takeUntilDestroyed(this.destroyRef)
       ).subscribe(isEditable => {
+        if(isEditable !== this.isEditable) {
+          this.showHintCard = isEditable && this.isUsingDefault;
+        }
         this.isEditable = isEditable;
         this.updateSidebar();
         isEditable ? grid.enable() : grid.disable();

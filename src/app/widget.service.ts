@@ -83,6 +83,34 @@ export class WidgetService {
       {
         uuid: "",
         parentUuid: "",
+        cardType: "calendar3",
+        name: "Calendar3",
+        positionX: 2,
+        positionY: 2,
+        width: 5,
+        height: 2,
+        resizeable: true,
+        enabled: false,
+        isSystemCard: false,
+        hideOnEmpty: false
+      },
+      {
+        uuid: "",
+        parentUuid: "",
+        cardType: "calendar2",
+        name: "Calendar2",
+        positionX: 2,
+        positionY: 2,
+        width: 5,
+        height: 2,
+        resizeable: true,
+        enabled: false,
+        isSystemCard: false,
+        hideOnEmpty: false
+      },
+      {
+        uuid: "",
+        parentUuid: "",
         cardType: "calendar",
         name: "Calendar",
         positionX: 2,
@@ -263,6 +291,25 @@ export class WidgetService {
       }
       console.log("Saving Dashboard", { dashboardRequest, cardRequests });
     }
+  }
+
+  importDefaultAsCustom(): void {
+    if (!this.editableCards || !this.response) return;
+    
+    const defaultCards: DashboardCard[] = this.getAllCards();
+    for (const card of this.editableCards) {
+      const defaultCard: DashboardCard | undefined = defaultCards.find((c: DashboardCard) => c.cardType === card.cardType);
+      if (defaultCard) {
+        card.enabled = defaultCard.enabled;
+        card.positionX = defaultCard.positionX;
+        card.positionY = defaultCard.positionY;
+        card.width = defaultCard.width;
+      } else {
+        card.enabled = false;
+      }
+    }
+
+    this.useDefault(false);
   }
 
   useDefault(useDefault: boolean): void {
