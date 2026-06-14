@@ -82,6 +82,8 @@ export class AppComponent {
   private hiddenDescendants: any[] = [];
   private hiddenDOMNodes: HTMLElement[] = []; // Add this!
   private initialLevel = 1;
+  private trueZeroX = 0;
+  private clickOffsetX = 0;
 
   ngAfterViewInit() {
     new Sortable(this.treeContainer.nativeElement, {
@@ -97,6 +99,13 @@ export class AppComponent {
 
       onStart: (e: any) => {
         this.initialLevel = parseInt(e.item.getAttribute('data-level') || '1');
+        
+        // --- NEW: Calibrate the X-Axis Grid ---
+        const rect = e.item.getBoundingClientRect();
+        // How far into the row did you click? (Neutralizes handle width)
+        this.clickOffsetX = e.originalEvent.clientX - rect.left; 
+        // What is the absolute X coordinate of Level 1 on your monitor?
+        this.trueZeroX = rect.left - ((this.initialLevel - 1) * this.depthPixels);
         
         this.hiddenDescendants = [];
         this.hiddenDOMNodes = [];
@@ -184,37 +193,38 @@ export class AppComponent {
   }
 
   calculateHorizontalDepth(mouseEvent: MouseEvent, ghostElement: HTMLElement) {
-    const treeLeft = this.treeContainer.nativeElement.getBoundingClientRect().left;
-    const mouseX = mouseEvent.clientX;
+    // 1. Where is the left edge of the row physically hovering right now?
+    const currentLeft = mouseEvent.clientX - this.clickOffsetX;
     
-    const offset = Math.max(0, mouseX - treeLeft);
-    let newLevel = Math.floor((offset + 15) / this.depthPixels) + 1;
+    // 2. How far is that from our True Zero grid?
+    const offset = Math.max(0, currentLeft - this.trueZeroX);
 
+    // 3. Math.round snaps it EXACTLY at the 50% midpoint of your depthPixels
+    let newLevel = Math.round(offset / this.depthPixels) + 1;
+
+    // 4. Find the true visible item directly above the drop gap
     let prevItem = ghostElement.previousElementSibling as HTMLElement;
     while (prevItem && (prevItem.style.display === 'none' || prevItem.classList.contains('sortable-drag'))) {
       prevItem = prevItem.previousElementSibling as HTMLElement;
     }
 
-    // 1. Get the real item directly BELOW the drop gap
+    // 5. Find the true visible item directly below the drop gap
     let nextItem = ghostElement.nextElementSibling as HTMLElement;
     while (nextItem && (nextItem.style.display === 'none' || nextItem.classList.contains('sortable-drag'))) {
       nextItem = nextItem.nextElementSibling as HTMLElement;
     }
 
+    // 6. Calculate boundaries
     const prevLevel = prevItem ? parseInt(prevItem.getAttribute('data-level') || '1') : 0;
-    
-    // 2. Determine the level of the item below (if bottom of list, it's 1)
     const nextLevel = nextItem ? parseInt(nextItem.getAttribute('data-level') || '1') : 1;
 
     const upperBound = Math.min(prevLevel + 1, this.maxLevel);
-    
-    // 3. THE FIX: Restore the lower bound
-    // You cannot outdent further than the item below you!
     const lowerBound = Math.max(1, nextLevel); 
 
-    // 4. Clamp the level strictly between the upper and lower bounds
+    // 7. Clamp the level strictly between the upper and lower bounds
     newLevel = Math.max(lowerBound, Math.min(newLevel, upperBound));
 
+    // 8. Visually update the indent instantly
     ghostElement.style.setProperty('--level', newLevel.toString());
     ghostElement.setAttribute('data-new-level', newLevel.toString());
   }
