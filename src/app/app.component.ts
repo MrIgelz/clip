@@ -17,6 +17,7 @@ import { DashboardComponent } from './dashboard/dashboard.component';
             [attr.data-id]="item.id"
             [attr.data-parent]="item.parent_id"
             [attr.data-level]="item.level"
+            [attr.data-no-children]="item.noChildren ? 'true' : null"
             [style.--level]="item.level"> <div class="drag-handle">
             <div class="drag-handle">
   ⠿ </div>
@@ -43,7 +44,7 @@ import { DashboardComponent } from './dashboard/dashboard.component';
       padding: 10px;
       margin-bottom: 4px;
       border-radius: 4px;
-      
+      position: relative; 
       /* The Magic: Margin is calculated automatically based on the --level variable */
       margin-left: calc(30px * (var(--level) - 1));
       transition: margin-left 0.1s ease-out;
@@ -56,7 +57,30 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 
     /* SortableJS Visual Classes */
     .sortable-ghost { opacity: 0.4; background: #e3f2fd; border-color: #90caf9; }
-    .sortable-drag { opacity: 1 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+    .sortable-drag { 
+    opacity: 0 !important; 
+    /*background: rgba(255, 255, 255, 0.9); 
+    z-index: 9999;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
+    transform: scale(1.02);*/ /* Gives it a nice "lifted" feel */
+}
+
+
+
+/* The badge that shows how many children you are carrying */
+.drag-child-count {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #007bff;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 12px;
+    pointer-events: none; /* Prevents it from interfering with the mouse math */
+}
   `]
 })
 export class AppComponent {
@@ -74,7 +98,7 @@ export class AppComponent {
     { id: 1, parent_id: 0, title: 'Branch 1', level: 1 },
     { id: 2, parent_id: 1, title: 'Branch 2', level: 2 },
     { id: 3, parent_id: 1, title: 'Branch 3', level: 2 },
-    { id: 4, parent_id: 3, title: 'Branch 4', level: 3 },
+    { id: 4, parent_id: 3, title: 'Branch 4', level: 3, noChildren: true },
     { id: 7, parent_id: 0, title: 'Branch 7', level: 1 },
   ];
 
@@ -125,6 +149,14 @@ export class AppComponent {
           }
         }
 
+        if (this.hiddenDescendants.length > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'drag-child-count';
+          // E.g., "+3 items"
+          badge.innerText = `+${this.hiddenDescendants.length} items`; 
+          e.item.appendChild(badge);
+        }
+
         this.dragListener = (mouseEvent: MouseEvent) => {
           this.calculateHorizontalDepth(mouseEvent, e.item);
         };
@@ -133,6 +165,9 @@ export class AppComponent {
 
       onEnd: (e: any) => {
         document.removeEventListener('mousemove', this.dragListener);
+
+        const badge = e.item.querySelector('.drag-child-count');
+        if (badge) badge.remove();
 
         // 1. Physically move the hidden DOM nodes to follow the parent's new location!
         let currentTarget = e.item;
@@ -216,12 +251,22 @@ export class AppComponent {
 
     // 6. Calculate boundaries
     const prevLevel = prevItem ? parseInt(prevItem.getAttribute('data-level') || '1') : 0;
-    const nextLevel = nextItem ? parseInt(nextItem.getAttribute('data-level') || '1') : 1;
+    
+    // 2. Check if the item above you forbids children
+    const noChildren = prevItem ? prevItem.getAttribute('data-no-children') === 'true' : false;
 
-    const upperBound = Math.min(prevLevel + 1, this.maxLevel);
+    // 3. THE UPPER BOUND FIX:
+    // If it forbids children, you can only be its sibling (prevLevel).
+    // Otherwise, you can become its child (prevLevel + 1).
+    const upperBound = noChildren 
+        ? prevLevel 
+        : Math.min(prevLevel + 1, this.maxLevel);
+
+    // 4. Get the lower bound (Keep your existing code)
+    const nextLevel = nextItem ? parseInt(nextItem.getAttribute('data-level') || '1') : 1;
     const lowerBound = Math.max(1, nextLevel); 
 
-    // 7. Clamp the level strictly between the upper and lower bounds
+    // Clamp the level
     newLevel = Math.max(lowerBound, Math.min(newLevel, upperBound));
 
     // 8. Visually update the indent instantly
