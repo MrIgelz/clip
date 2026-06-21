@@ -1,276 +1,307 @@
 import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import Sortable from 'sortablejs';
 import { RouterOutlet } from '@angular/router';
+import { FormsModule } from '@angular/forms'; 
 import { DashboardComponent } from './dashboard/dashboard.component';
+/*
+import jakarta.activation.DataHandler;
+import jakarta.mail.Message;
+import jakarta.mail.Multipart;
+import jakarta.mail.Session;
+import jakarta.mail.Transport;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import jakarta.mail.util.ByteArrayDataSource;
+import java.io.ByteArrayOutputStream;
+
+public class EmailSender {
+
+    public void sendeExcelEmail(Session session, String to, ByteArrayOutputStream excelStream) throws Exception {
+        // Multi-Part-Objekt für Text und Anhang erstellen
+        Multipart multipart = new MimeMultipart();
+
+        // 1. Text-Teil der E-Mail
+        MimeBodyPart textPart = new MimeBodyPart();
+        textPart.setText("Hallo,\n\nanbei finden Sie die gewünschte Excel-Datei.");
+        multipart.addBodyPart(textPart);
+
+        // 2. Excel-Anhang-Teil
+        byte[] bytes = excelStream.toByteArray();
+        String excelMimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        ByteArrayDataSource dataSource = new ByteArrayDataSource(bytes, excelMimeType);
+        
+        MimeBodyPart attachmentPart = new MimeBodyPart();
+        attachmentPart.setDataHandler(new DataHandler(dataSource));
+        attachmentPart.setFileName("daten_export.xlsx"); // Gewünschter Dateiname
+        multipart.addBodyPart(attachmentPart);
+
+        // 3. Gesamt-Nachricht aufbauen
+        Message message = new MimeMessage(session);
+        message.setFrom(new InternetAddress("sender@example.com"));
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
+        message.setSubject("Ihr Excel-Export");
+        message.setContent(multipart);
+
+        // 4. E-Mail senden
+        Transport.send(message);
+    }
+}
+*/
+
+ const TARGET_WIDTH: number = 600;
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, DashboardComponent, CommonModule],
+  imports: [FormsModule, RouterOutlet, DashboardComponent, CommonModule],
   template: `
-    <div class="tree-wrapper">
-      <h3>SortableJS Flat-Tree</h3>
+    <div class="canvas-container">
+      <div class="canvas-wrapper">
+      <canvas #canvas width="600">
+      </canvas>
+      <div class="v-line" [style.left.%]="focusValueX"></div>
+      <div class="h-line" [style.top.%]="focusValueY"></div>
+      <div class="crosshair ch-v" [style.left.%]="focusValueX" [style.top.%]="focusValueY"></div>
+      <div class="crosshair ch-h" [style.left.%]="focusValueX" [style.top.%]="focusValueY"></div>
       
-      <ul #treeContainer class="tree-container">
-        <li *ngFor="let item of items" 
-            class="tree-branch"
-            [attr.data-id]="item.id"
-            [attr.data-parent]="item.parent_id"
-            [attr.data-level]="item.level"
-            [attr.data-no-children]="item.noChildren ? 'true' : null"
-            [style.--level]="item.level"> <div class="drag-handle">
-            <div class="drag-handle">
-  ⠿ </div>
-          </div>
-          
-          <span class="branch-title">{{ item.title }} (Level {{ item.level }})</span>
-          
-          <div class="actions">
-       
-          </div>
-        </li>
-      </ul>
+</div >
+      <input #verticalSlider
+            type="range" 
+            min="0" 
+            max="100" 
+            step="1" 
+            [(ngModel)]="focusValueY" 
+            class="vertical-slider"
+        >
+         <input #horizontalSlider
+    type="range" 
+    min="0" 
+    max="100" 
+    step="1" 
+    [(ngModel)]="focusValueX" 
+    class="horizontal-slider"
+  >
+    </div>
+
+   <div class="preview-container">
+      <div class="preview-canvas-wrapper">
+        <img *ngIf="imageUrl"
+             [src]="imageUrl"
+             [style.width.px]="previewBoxWidth"
+             [style.height.px]="previewBoxHeight"
+             [style.object-position]="customObjectPosition"
+             class="real-preview-img">
+      </div>
+      
+      <div class="preview-controls">
+        <label>Simulierte Breite: {{ simulatedWidth }}px</label>
+        <input #previewSlider type="range" 
+               min="200" max="4000" step="1" 
+               [(ngModel)]="simulatedWidth" 
+               class="preview-slider">
+      </div>
     </div>
   `,
-  styles: [`
-    .tree-wrapper { padding: 20px; font-family: sans-serif; }
-    .tree-container { list-style: none; padding: 0; margin: 0; }
-    
-    .tree-branch {
+  styles: [` 
+  
+
+   .preview-container {
+      margin-top: 40px; 
+      width: 600px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+
+    .preview-canvas-wrapper {
+      width: 100%;
       display: flex;
       align-items: center;
-      background: white;
-      border: 1px solid #e0e0e0;
-      padding: 10px;
-      margin-bottom: 4px;
+      justify-content: center;
+      background: #fff;
       border-radius: 4px;
-      position: relative; 
-      /* The Magic: Margin is calculated automatically based on the --level variable */
-      margin-left: calc(30px * (var(--level) - 1));
-      transition: margin-left 0.1s ease-out;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
     }
-    
-    .drag-handle { cursor: grab; margin-right: 15px; color: #999; }
-    .drag-handle:active { cursor: grabbing; }
-    .branch-title { flex-grow: 1; font-weight: 500; }
-    .actions button { cursor: pointer; border: none; background: none; }
 
-    /* SortableJS Visual Classes */
-    .sortable-ghost { opacity: 0.4; background: #e3f2fd; border-color: #90caf9; }
-    .sortable-drag { 
-    opacity: 0 !important; 
-    /*background: rgba(255, 255, 255, 0.9); 
-    z-index: 9999;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
-    transform: scale(1.02);*/ /* Gives it a nice "lifted" feel */
+    /* Neu: Styling für das nativ berechnete Vorschau-Bild */
+    .real-preview-img {
+      object-fit: cover;
+      display: block;
+      background: #eee;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+
+    .preview-controls {
+      margin-top: 15px;
+      font-family: sans-serif;
+      font-size: 14px;
+      color: #333;
+    }
+
+.canvas-wrapper {
+  position: relative; /* Die Linie orientiert sich jetzt hier */
+  width: fit-content;
+  height: auto;
+  display: inline-block;
+}
+    .canvas-container { 
+   position: relative; 
+  user-select: none; 
+  line-height: 0;
+  display: block; 
+  width: fit-content; 
+  height: auto;  
+  padding-right: 40px; 
+    }
+
+    .h-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      border-top: 2px dashed blue;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    .v-line {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      border-left: 2px dashed blue;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    canvas { 
+      display: block; 
+      position: relative;
+      background: #fff; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    }
+
+    .vertical-slider {
+ position: absolute;
+  top: 0;
+  right: 0;
+ 
+  width: 25px; 
+
+  margin: 0; 
+  cursor: pointer;
+  writing-mode: vertical-lr; 
+
 }
 
+    .horizontal-slider {
+display: block;
+  /* Zwingt den Slider haargenau auf die aktuelle Container-Höhe (die vom Canvas bestimmt wird) */
+        /* Haargenau dieselbe Breite wie dein Canvas */
+  margin: 15px 0 0 0;
+  margin: 0; 
+  cursor: pointer; 
 
-
-/* The badge that shows how many children you are carrying */
-.drag-child-count {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #007bff;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 12px;
-    pointer-events: none; /* Prevents it from interfering with the mouse math */
 }
+
+    .crosshair {
+      position: absolute;
+      background: #ff0000;
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+
+    .ch-v {
+   
+      margin-top: -10px; 
+      width: 2px;
+      height: 20px;
+      transform: translateX(-50%);
+    }
+
+    .ch-h {
+  
+      margin-left: -10px; 
+      height: 2px;
+      width: 20px;
+      transform: translateY(-50%);
+    }
   `]
 })
 export class AppComponent {
+  @ViewChild('canvas') canvas!: ElementRef;
+  @ViewChild('previewCanvas') previewCanvas!: ElementRef;
+  @ViewChild('horizontalSlider') horizontalSlider!: ElementRef;
+  @ViewChild('verticalSlider') verticalSlider!: ElementRef;
+  @ViewChild('previewSlider') previewSlider!: ElementRef;
 
-  @ViewChild('treeContainer') treeContainer!: ElementRef;
-  title = 'gridstack';
+  focusValueX: number = 50;
+  focusValueY: number = 50;
+  simulatedWidth: number = 4000;
+  simulatedHeight: number = 500;
 
- 
-// Configuration
-  depthPixels = 30;
-  maxLevel = 10;
-  
-  // Your Data
-  items = [
-    { id: 1, parent_id: 0, title: 'Branch 1', level: 1 },
-    { id: 2, parent_id: 1, title: 'Branch 2', level: 2 },
-    { id: 3, parent_id: 1, title: 'Branch 3', level: 2 },
-    { id: 4, parent_id: 3, title: 'Branch 4', level: 3, noChildren: true },
-    { id: 7, parent_id: 0, title: 'Branch 7', level: 1 },
-  ];
+  originalImage: HTMLImageElement = null;
+  imageUrl: string = "https://m.media-amazon.com/images/I/71rds6e+WeL._SX425_.jpg";
 
- private dragListener: any;
-  private hiddenDescendants: any[] = [];
-  private hiddenDOMNodes: HTMLElement[] = []; // Add this!
-  private initialLevel = 1;
-  private trueZeroX = 0;
-  private clickOffsetX = 0;
+  get previewBoxWidth(): number {
+    const scale = Math.min(600 / this.simulatedWidth, 1); // 1 = 500/500 (Max Display Height / Virtual Height)
+    return this.simulatedWidth * scale;
+  }
+
+  // Berechnet die korrespondierende skalierte Höhe (basierend auf max 500px)
+  get previewBoxHeight(): number {
+    const scale = Math.min(600 / this.simulatedWidth, 1);
+    return this.simulatedHeight * scale; 
+  }
+
+  get customObjectPosition(): string {
+    if (!this.originalImage) return '50% 50%';
+
+    const boxW = this.previewBoxWidth;
+    const boxH = this.previewBoxHeight;
+    const imgW = this.originalImage.width;
+    const imgH = this.originalImage.height;
+
+    // 1. Wie stark wird der Browser das Bild skalieren (object-fit: cover)?
+    const scale = Math.max(boxW / imgW, boxH / imgH);
+    const scaledImgW = imgW * scale;
+    const scaledImgH = imgH * scale;
+
+    // 2. Wo liegt der Fokuspunkt in Pixeln auf dem hochskalierten Bild?
+    const focusPxX = scaledImgW * (this.focusValueX / 100);
+    const focusPxY = scaledImgH * (this.focusValueY / 100);
+
+    // 3. Wie müssen wir das Bild verschieben, damit dieser Punkt exakt in der Box-Mitte liegt?
+    let offsetX = (boxW / 2) - focusPxX;
+    let offsetY = (boxH / 2) - focusPxY;
+
+    // 4. Clamping: Das Bild darf nicht weiter verschoben werden, als Bildmaterial da ist.
+    offsetX = Math.max(boxW - scaledImgW, Math.min(0, offsetX));
+    offsetY = Math.max(boxH - scaledImgH, Math.min(0, offsetY));
+
+    // 5. Rechne diese perfekten Pixel-Offsets zurück in CSS-Prozente für object-position
+    const cssPosX = boxW === scaledImgW ? 50 : (offsetX / (boxW - scaledImgW)) * 100;
+    const cssPosY = boxH === scaledImgH ? 50 : (offsetY / (boxH - scaledImgH)) * 100;
+
+    return `${cssPosX}% ${cssPosY}%`;
+  }
 
   ngAfterViewInit() {
-    new Sortable(this.treeContainer.nativeElement, {
-      handle: '.drag-handle', 
-      animation: 150, 
-      ghostClass: 'sortable-ghost',
-      dragClass: 'sortable-drag',
-      
-      // THE MAGIC BULLET: Disables HTML5 Drag and Drop and uses Mouse coordinates.
-      // This makes it behave exactly like the old jQuery UI plugin!
-      forceFallback: true, 
-      fallbackClass: 'sortable-drag', 
-
-      onStart: (e: any) => {
-        this.initialLevel = parseInt(e.item.getAttribute('data-level') || '1');
-        
-        // --- NEW: Calibrate the X-Axis Grid ---
-        const rect = e.item.getBoundingClientRect();
-        // How far into the row did you click? (Neutralizes handle width)
-        this.clickOffsetX = e.originalEvent.clientX - rect.left; 
-        // What is the absolute X coordinate of Level 1 on your monitor?
-        this.trueZeroX = rect.left - ((this.initialLevel - 1) * this.depthPixels);
-        
-        this.hiddenDescendants = [];
-        this.hiddenDOMNodes = [];
-
-        // 1. Scoop up all descendants AND their physical DOM nodes
-        for (let i = e.oldIndex + 1; i < this.items.length; i++) {
-          if (this.items[i].level > this.initialLevel) {
-            this.hiddenDescendants.push(this.items[i]);
-            
-            const node = this.treeContainer.nativeElement.children[i];
-            this.hiddenDOMNodes.push(node);
-            
-            // Hide them so SortableJS jumps over them cleanly
-            if (node) node.style.display = 'none';
-          } else {
-            break; 
-          }
-        }
-
-        if (this.hiddenDescendants.length > 0) {
-          const badge = document.createElement('span');
-          badge.className = 'drag-child-count';
-          // E.g., "+3 items"
-          badge.innerText = `+${this.hiddenDescendants.length} items`; 
-          e.item.appendChild(badge);
-        }
-
-        this.dragListener = (mouseEvent: MouseEvent) => {
-          this.calculateHorizontalDepth(mouseEvent, e.item);
-        };
-        document.addEventListener('mousemove', this.dragListener);
-      },
-
-      onEnd: (e: any) => {
-        document.removeEventListener('mousemove', this.dragListener);
-
-        const badge = e.item.querySelector('.drag-child-count');
-        if (badge) badge.remove();
-
-        // 1. Physically move the hidden DOM nodes to follow the parent's new location!
-        let currentTarget = e.item;
-        this.hiddenDOMNodes.forEach(node => {
-          currentTarget.insertAdjacentElement('afterend', node);
-          currentTarget = node; // advance target so they stay in the correct order
-          node.style.display = ''; // Unhide them
-        });
-
-        // 2. Calculate the new array insertion index
-        let insertIndex = e.newIndex;
-        if (e.newIndex > e.oldIndex) {
-          // If we dragged DOWN, the newIndex includes the hidden nodes we left behind.
-          // We must subtract them to find the true index for the Angular array.
-          insertIndex = e.newIndex - this.hiddenDescendants.length;
-        }
-
-        // 3. Get the horizontal level shift
-        const newLevelStr = e.item.getAttribute('data-new-level');
-        const newLevel = newLevelStr ? parseInt(newLevelStr) : this.initialLevel;
-        const levelShift = newLevel - this.initialLevel;
-        e.item.removeAttribute('data-new-level');
-
-        // 4. Extract the parent and children from the OLD array position
-        const parentItem = this.items[e.oldIndex];
-        this.items.splice(e.oldIndex, 1 + this.hiddenDescendants.length);
-
-        // 5. Apply the level shifts to the parent and children
-        parentItem.level = newLevel;
-        this.hiddenDescendants.forEach(desc => desc.level += levelShift);
-
-        // 6. Insert the entire block into the NEW array position
-        this.items.splice(insertIndex, 0, parentItem, ...this.hiddenDescendants);
-
-        // 7. Rebuild parent IDs so your data stays intact
-        this.rebuildTreeRelationships();
-      }
-    });
-  }
-
-
-  rebuildTreeRelationships() {
-    for (let i = 0; i < this.items.length; i++) {
-      const item = this.items[i];
-      if (item.level === 1) {
-        item.parent_id = 0;
-        continue;
-      }
-      
-      // Scan upwards to find the nearest parent
-      for (let j = i - 1; j >= 0; j--) {
-        if (this.items[j].level === item.level - 1) {
-          item.parent_id = this.items[j].id;
-          break;
-        }
-      }
+    const img: HTMLImageElement = new Image();
+    img.crossOrigin = "anonymous"; 
+    img.src = 'https://m.media-amazon.com/images/I/71rds6e+WeL._SX425_.jpg';
+    img.onload = () => {
+      this.originalImage = img;
+      const aspectRatio = img.height / img.width;
+      const targetHeight = TARGET_WIDTH * aspectRatio;
+      this.canvas.nativeElement.height = targetHeight;
+      this.canvas.nativeElement.style.height = targetHeight + 'px';
+      this.horizontalSlider.nativeElement.style.width = TARGET_WIDTH + 'px';
+      this.previewSlider.nativeElement.style.width = TARGET_WIDTH + 'px';
+      this.verticalSlider.nativeElement.style.height  = targetHeight + 'px';
+      const ctx: CanvasRenderingContext2D = this.canvas.nativeElement.getContext('2d');
+      ctx.drawImage(img, 0, 0, this.canvas.nativeElement.width, this.canvas.nativeElement.height);
+  
     }
-  }
-
-  calculateHorizontalDepth(mouseEvent: MouseEvent, ghostElement: HTMLElement) {
-    // 1. Where is the left edge of the row physically hovering right now?
-    const currentLeft = mouseEvent.clientX - this.clickOffsetX;
-    
-    // 2. How far is that from our True Zero grid?
-    const offset = Math.max(0, currentLeft - this.trueZeroX);
-
-    // 3. Math.round snaps it EXACTLY at the 50% midpoint of your depthPixels
-    let newLevel = Math.round(offset / this.depthPixels) + 1;
-
-    // 4. Find the true visible item directly above the drop gap
-    let prevItem = ghostElement.previousElementSibling as HTMLElement;
-    while (prevItem && (prevItem.style.display === 'none' || prevItem.classList.contains('sortable-drag'))) {
-      prevItem = prevItem.previousElementSibling as HTMLElement;
-    }
-
-    // 5. Find the true visible item directly below the drop gap
-    let nextItem = ghostElement.nextElementSibling as HTMLElement;
-    while (nextItem && (nextItem.style.display === 'none' || nextItem.classList.contains('sortable-drag'))) {
-      nextItem = nextItem.nextElementSibling as HTMLElement;
-    }
-
-    // 6. Calculate boundaries
-    const prevLevel = prevItem ? parseInt(prevItem.getAttribute('data-level') || '1') : 0;
-    
-    // 2. Check if the item above you forbids children
-    const noChildren = prevItem ? prevItem.getAttribute('data-no-children') === 'true' : false;
-
-    // 3. THE UPPER BOUND FIX:
-    // If it forbids children, you can only be its sibling (prevLevel).
-    // Otherwise, you can become its child (prevLevel + 1).
-    const upperBound = noChildren 
-        ? prevLevel 
-        : Math.min(prevLevel + 1, this.maxLevel);
-
-    // 4. Get the lower bound (Keep your existing code)
-    const nextLevel = nextItem ? parseInt(nextItem.getAttribute('data-level') || '1') : 1;
-    const lowerBound = Math.max(1, nextLevel); 
-
-    // Clamp the level
-    newLevel = Math.max(lowerBound, Math.min(newLevel, upperBound));
-
-    // 8. Visually update the indent instantly
-    ghostElement.style.setProperty('--level', newLevel.toString());
-    ghostElement.setAttribute('data-new-level', newLevel.toString());
   }
 }

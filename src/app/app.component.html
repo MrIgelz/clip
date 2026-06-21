@@ -4,5 +4,17 @@
                 <ul id="right-tree"></ul>
             </div>
         </div>
+<div class="editor-container">
+        <canvas #canvas width="800" height="600" style="border:1px solid #000;"></canvas>
+        <input 
+            type="range" 
+            min="0" 
+            max="1" 
+            step="0.01" 
+            [value]="focusValue" 
+            (input)="onSliderChange($event)"
+            class="vertical-slider"
+        >
+        </div>
 <dashboard/>
 <router-outlet/>
