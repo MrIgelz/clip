@@ -1,0 +1,69 @@
+<input 
+    type="file" 
+    accept="image/*" 
+    (change)="onFileSelected($event)"
+>
+
+@if (imgSrc) {
+    <div class="new-profile-image-container">
+        <h2 class="new-profile-image-title">
+            Profilbild erstellen
+        </h2>
+        <div class="cropper-wrapper">
+            <div class="cropper-container" 
+                [style.width.px]="containerWidth"
+                [style.height.px]="containerHeight"
+                (mousedown)="onDragStart($event)" 
+                (touchstart)="onDragStart($event)"
+                (wheel)="onWheel($event)"
+                [style.cursor]="isDragging ? 'grabbing' : 'grab'"
+            >
+                <img 
+                    #sourceImage 
+                    [src]="imgSrc" 
+                    crossorigin="anonymous"
+                    class="cropper-image" 
+                    (load)="onImageLoad($event)"
+                    [style.visibility]="naturalWidth ? 'visible' : 'hidden'"
+                    [style.width.px]="naturalWidth ? naturalWidth : null"
+                    [style.height.px]="naturalHeight ? naturalHeight : null"
+                    [style.transform]="'translate(-50%, -50%) translate(' + x + 'px, ' + y + 'px) scale(' + scale + ') rotate(' + rotation + 'deg)'">
+                <div class="cropper-mask-hole"></div>
+            </div>
+        </div>
+        <div class="cropper-controls">
+            <i class="fa-solid fa-rotate-right"
+            (click)="rotateImage()"></i>
+            <div class="cropper-zoom-controls">
+                <i class="fa-solid fa-magnifying-glass-minus"
+                (click)="deltaZoom(-baseScale / 10)"></i>
+                <input type="range"
+                [min]="baseScale"
+                [max]="baseScale * 3"
+                [step]="(2 * baseScale) / 100"
+                [value]="scale"
+                (input)="onSliderChange($event)"/>
+                <i class="fa-solid fa-magnifying-glass-plus"
+                (click)="deltaZoom(baseScale / 10)"></i>
+            </div>
+            <button class="action-btn primary" 
+                    (click)="cropImage()">
+                Abbrechen
+            </button>
+            <button class="action-btn primary" 
+                    (click)="cropImage()">
+                Speichern
+            </button>
+        </div>
+    </div>
+
+    @if (croppedResult) {
+        <div class="result-container">
+            <h3>
+                Ergebnis (320x320 Pixel)
+            </h3>
+            <img class="result-image"
+                [src]="croppedResult">
+        </div>
+    }
+}

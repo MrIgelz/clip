@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { FormsModule } from '@angular/forms'; 
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { CropComponent } from './crop/crop.component';
 /*
 import jakarta.activation.DataHandler;
 import jakarta.mail.Message;
@@ -54,8 +55,11 @@ public class EmailSender {
 
 @Component({
   selector: 'app-root',
-  imports: [FormsModule, RouterOutlet, DashboardComponent, CommonModule],
+  imports: [FormsModule, RouterOutlet, DashboardComponent, CropComponent, CommonModule],
   template: `
+  
+<app-crop></app-crop>
+<!--
     <div class="canvas-container">
       <div class="canvas-wrapper">
       <canvas #canvas width="600">
@@ -97,11 +101,12 @@ public class EmailSender {
       <div class="preview-controls">
         <label>Simulierte Breite: {{ simulatedWidth }}px</label>
         <input #previewSlider type="range" 
-               min="200" max="4000" step="1" 
+               min="200" max="1200" step="1" 
                [(ngModel)]="simulatedWidth" 
                class="preview-slider">
       </div>
     </div>
+-->
   `,
   styles: [` 
   
@@ -237,7 +242,7 @@ export class AppComponent {
 
   focusValueX: number = 50;
   focusValueY: number = 50;
-  simulatedWidth: number = 4000;
+  simulatedWidth: number = 1000;
   simulatedHeight: number = 500;
 
   originalImage: HTMLImageElement = null;
