@@ -5,11 +5,15 @@ import { provideRouter } from '@angular/router';
 import Aura from '@primeng/themes/aura';
 
 import { routes } from './app.routes';
+import { provideHttpClient } from '@angular/common/http';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }), provideRouter(routes),
     provideAnimationsAsync(),
+    provideRouter(routes),
+    // 2. Add it to the providers array
+    provideHttpClient(),
     providePrimeNG({
       theme: {
         preset: Aura

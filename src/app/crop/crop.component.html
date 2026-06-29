@@ -16,10 +16,19 @@
                 <p-tabpanel value="tab3">
                     <h2 class="text-lg font-bold">Preferences</h2>
                     <p class="text-surface-500 mt-1">Customize how the application looks and behaves to match your personal preferences.</p>
-                    <input type="file" accept="image/*" (change)="fileChangeEvent($event)">
+          <div style="margin-bottom: 1rem;">
+        <p-fileUpload 
+            mode="basic" 
+            chooseLabel="Choose Picture" 
+            chooseIcon="pi pi-image"
+            accept="image/*" 
+            maxFileSize="10000000" 
+            (onSelect)="onFileSelect($event)">
+        </p-fileUpload>
+    </div>
     
     <div style="display: flex;">
-        
+        @if(file) {
         <div style="width: 500px;">
             <image-cropper
                 [imageFile]="file"
@@ -27,7 +36,7 @@
                 format="png"
             ></image-cropper>
         </div>
-
+    }
     </div>
                 </p-tabpanel>
             </p-tabpanels>

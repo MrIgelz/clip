@@ -5,10 +5,10 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { ImageCropperComponent, ImageCroppedEvent, LoadedImage } from 'ngx-image-cropper';
 import {CardModule} from 'primeng/card';
 import { TabsModule } from 'primeng/tabs';
-
+import { FileUploadModule } from 'primeng/fileupload';
 @Component({
   selector: 'app-crop',
-  imports: [CommonModule,ImageCropperComponent,CardModule, NamedTemplateDirective,TabsModule],
+  imports: [CommonModule,ImageCropperComponent,CardModule, FileUploadModule,TabsModule],
   templateUrl: './crop.component.html',
   styleUrl: './crop.component.scss'
 })
@@ -27,12 +27,12 @@ export class CropComponent {
     ) {
     }
 
-
-    fileChangeEvent(event: Event): void {
-        
-        const input: HTMLInputElement = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) this.file = input.files[0];
+onFileSelect(event: any): void {
+    // PrimeNG stores the selected files in an array directly on the event object
+    if (event.files && event.files.length > 0) {
+        this.file = event.files[0];
     }
+}
     imageCropped(event: ImageCroppedEvent) {
       this.croppedImage = this.sanitizer.bypassSecurityTrustUrl(event.objectUrl);
       // event.blob can be used to upload the cropped image
