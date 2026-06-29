@@ -1,14 +1,61 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { NamedTemplateDirective } from "../dashboard/dashboard.component";
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { ImageCropperComponent, ImageCroppedEvent, LoadedImage } from 'ngx-image-cropper';
+import {CardModule} from 'primeng/card';
+import { TabsModule } from 'primeng/tabs';
 
 @Component({
   selector: 'app-crop',
-  imports: [CommonModule, NamedTemplateDirective],
+  imports: [CommonModule,ImageCropperComponent,CardModule, NamedTemplateDirective,TabsModule],
   templateUrl: './crop.component.html',
   styleUrl: './crop.component.scss'
 })
 export class CropComponent {
+
+
+
+
+
+
+   imageChangedEvent: Event | null = null;
+    croppedImage: SafeUrl  = '';
+    file:File | null = null;
+    constructor(
+      private sanitizer: DomSanitizer
+    ) {
+    }
+
+
+    fileChangeEvent(event: Event): void {
+        
+        const input: HTMLInputElement = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) this.file = input.files[0];
+    }
+    imageCropped(event: ImageCroppedEvent) {
+      this.croppedImage = this.sanitizer.bypassSecurityTrustUrl(event.objectUrl);
+      // event.blob can be used to upload the cropped image
+    }
+    imageLoaded(image: LoadedImage) {
+        // show cropper
+    }
+    cropperReady() {
+        // cropper ready
+    }
+    loadImageFailed() {
+        // show message
+    }
+
+
+
+
+
+
+
+
+/*
+
 
   @ViewChild('sourceImage') sourceImage!: ElementRef<HTMLImageElement>;
 
@@ -193,5 +240,5 @@ export class CropComponent {
     );
 
     this.croppedResult = canvas.toDataURL('image/png');
-  }
+  }*/
 }

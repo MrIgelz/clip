@@ -1,9 +1,41 @@
-<input 
-    type="file" 
-    accept="image/*" 
-    (change)="onFileSelected($event)"
->
+      <p-tabs value="tab1">
+            <p-tablist>
+                <p-tab value="tab1">Account Info</p-tab>
+                <p-tab value="tab2">Payment</p-tab>
+                <p-tab value="tab3">Preferences</p-tab>
+            </p-tablist>
+            <p-tabpanels>
+                <p-tabpanel value="tab1">
+                    <h2 class="text-lg font-bold">Account Info</h2>
+                    <p class="text-surface-500 mt-1">Update your personal information such as name, email address, and profile picture.</p>
+                </p-tabpanel>
+                <p-tabpanel value="tab2">
+                    <h2 class="text-lg font-bold">Payment</h2>
+                    <p class="text-surface-500 mt-1">Manage your subscription plan, view invoices, and update your payment method.</p>
+                </p-tabpanel>
+                <p-tabpanel value="tab3">
+                    <h2 class="text-lg font-bold">Preferences</h2>
+                    <p class="text-surface-500 mt-1">Customize how the application looks and behaves to match your personal preferences.</p>
+                    <input type="file" accept="image/*" (change)="fileChangeEvent($event)">
+    
+    <div style="display: flex;">
+        
+        <div style="width: 500px;">
+            <image-cropper
+                [imageFile]="file"
+                [maintainAspectRatio]="false" 
+                format="png"
+            ></image-cropper>
+        </div>
 
+    </div>
+                </p-tabpanel>
+            </p-tabpanels>
+        </p-tabs>
+
+
+
+<!--
 @if (imgSrc) {
     <div class="new-profile-image-container">
         <h2 class="new-profile-image-title">
@@ -66,4 +98,4 @@
                 [src]="croppedResult">
         </div>
     }
-}
+}-->
